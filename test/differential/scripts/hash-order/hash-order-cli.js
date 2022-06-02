@@ -13,6 +13,7 @@ const main = async () => {
   const hash = hashOrder(order);
 
   process.stdout.write(hash);
+  process.exit();
 };
 
 main();

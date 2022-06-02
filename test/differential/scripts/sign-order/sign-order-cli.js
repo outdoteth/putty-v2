@@ -15,6 +15,7 @@ const main = async () => {
   const signature = await signOrder(order, privateKey);
 
   process.stdout.write(signature);
+  process.exit();
 };
 
 main();

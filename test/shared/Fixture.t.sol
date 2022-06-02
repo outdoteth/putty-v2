@@ -15,6 +15,12 @@ abstract contract Fixture is Test {
     string internal checkpointLabel;
     uint256 internal checkpointGasLeft;
 
+    address[] internal __whitelist;
+    address[] internal __floorTokens;
+    PuttyV2.ERC20Asset[] internal __erc20Assets;
+    PuttyV2.ERC721Asset[] internal __erc721Assets;
+    uint256[] internal __floorAssetTokenIds;
+
     constructor() {
         p = new PuttyV2();
 
@@ -42,5 +48,29 @@ abstract contract Fixture is Test {
         uint256 gasDelta = checkpointGasLeft - checkpointGasLeft2 - 20_000;
 
         console.log(string(abi.encodePacked(checkpointLabel, " Gas")), gasDelta);
+    }
+
+    function signOrder(uint256 privateKey, PuttyV2.Order memory order) internal returns (bytes memory signature) {
+        bytes32 digest = p.hashOrder(order);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        signature = abi.encodePacked(r, s, v);
+    }
+
+    function defaultOrder() internal view returns (PuttyV2.Order memory order) {
+        order = PuttyV2.Order({
+            maker: babe,
+            isCall: true,
+            isLong: true,
+            baseAsset: bob,
+            strike: 1,
+            premium: 2,
+            duration: 3,
+            expiration: 4,
+            nonce: 5,
+            whitelist: __whitelist,
+            floorTokens: __floorTokens,
+            erc20Assets: __erc20Assets,
+            erc721Assets: __erc721Assets
+        });
     }
 }

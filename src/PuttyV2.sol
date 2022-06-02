@@ -92,7 +92,7 @@ contract PuttyV2 is EIP712, ERC721 {
         // check floor asset token ids length is 0 unless the order `type` is call and `side` is long
         order.isCall && order.isLong
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
-            : require(floorAssetTokenIds.length == 0 && order.floorTokens.length == 0, "Invalid floor tokens");
+            : require(floorAssetTokenIds.length == 0 && order.floorTokens.length == 0, "Invalid floor tokens length");
 
         /*
             ~~~ EFFECTS ~~~
