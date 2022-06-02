@@ -69,14 +69,6 @@ contract PuttyV2 is EIP712, ERC721 {
 
     constructor() EIP712("Putty", "2.0") ERC721("Putty", "OPUT") {}
 
-    function tokenURI(uint256 id) public pure override returns (string memory) {
-        return "";
-    }
-
-    function domainSeparatorV4() public view returns (bytes32) {
-        return _domainSeparatorV4();
-    }
-
     function fillOrder(
         Order memory order,
         bytes calldata signature,
@@ -94,10 +86,10 @@ contract PuttyV2 is EIP712, ERC721 {
         // check order is not cancelled
         require(!cancelledOrders[orderHash], "Order has been cancelled");
 
-        // check msg.sender is in the order whitelist
-        require(isWhitelisted(order.whitelist, msg.sender), "Not whitelisted");
+        // check msg.sender is allowed to fill the order
+        require(order.whitelist.length == 0 || isWhitelisted(order.whitelist, msg.sender), "Not whitelisted");
 
-        // check floor asset token ids length is 0 unless type is call and side is long
+        // check floor asset token ids length is 0 unless the order `type` is call and `side` is long
         order.isCall && order.isLong
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
             : require(floorAssetTokenIds.length == 0 && order.floorTokens.length == 0, "Invalid floor tokens");
@@ -147,8 +139,6 @@ contract PuttyV2 is EIP712, ERC721 {
     }
 
     function isWhitelisted(address[] memory whitelist, address target) public pure returns (bool) {
-        if (whitelist.length == 0) return true;
-
         for (uint256 i = 0; i < whitelist.length; i++) {
             if (target == whitelist[i]) return true;
         }
@@ -196,5 +186,13 @@ contract PuttyV2 is EIP712, ERC721 {
                 keccak256(abi.encode(ERC20ASSET_TYPE_HASH, arr[i].token, arr[i].tokenAmount))
             );
         }
+    }
+
+    function tokenURI(uint256 id) public pure override returns (string memory) {
+        return "";
+    }
+
+    function domainSeparatorV4() public view returns (bytes32) {
+        return _domainSeparatorV4();
     }
 }
