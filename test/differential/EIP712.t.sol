@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
@@ -9,7 +9,7 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestEIP712 is Fixture {
-    function setUp() public {}
+    function testRecoveredSignerMatchesEthersEIP712Implementation() public {}
 
     function testOrderHashMatchesEthersEIP712Implementation(PuttyV2.Order memory order) public {
         // arrange
