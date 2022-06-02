@@ -9,19 +9,78 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestEIP712 is Fixture {
-    function testRecoveredSignerMatchesEthersEIP712Implementation() public {}
+    address[] internal addrArr;
+    PuttyV2.ERC20Asset[] internal erc20Assets;
+    PuttyV2.ERC721Asset[] internal erc721Assets;
+
+    function testRecoveredSignerMatchesEthersEIP712Implementation() public {
+        PuttyV2.Order memory order = PuttyV2.Order({
+            maker: babe,
+            isCall: false,
+            isLong: false,
+            baseAsset: bob,
+            strike: 1,
+            premium: 2,
+            duration: 3,
+            expiration: 4,
+            nonce: 5,
+            whitelist: addrArr,
+            floorTokens: addrArr,
+            erc20Assets: erc20Assets,
+            erc721Assets: erc721Assets
+        });
+
+        testRecoveredSignerMatchesEthersEIP712Implementation(order);
+    }
+
+    function testRecoveredSignerMatchesEthersEIP712Implementation(PuttyV2.Order memory order) public {
+        // arrange
+        string[] memory runJsInputs = new string[](4);
+        runJsInputs[0] = "node";
+        runJsInputs[1] = "./test/differential/scripts/sign-order/sign-order-cli.js";
+        runJsInputs[2] = toHexString(abi.encode(order));
+        runJsInputs[3] = toHexString(abi.encode(babePrivateKey));
+
+        // act
+        bytes memory ethersSignature = vm.ffi(runJsInputs);
+        bytes32 orderHash = p.hashOrder(order);
+        address recoveredAddress = ECDSA.recover(orderHash, ethersSignature);
+
+        // assert
+        assertEq(recoveredAddress, babe, "Should have recovered signing address");
+    }
+
+    function testOrderHashMatchesEthersEIP712Implementation() public {
+        PuttyV2.Order memory order = PuttyV2.Order({
+            maker: babe,
+            isCall: false,
+            isLong: false,
+            baseAsset: bob,
+            strike: 1,
+            premium: 2,
+            duration: 3,
+            expiration: 4,
+            nonce: 5,
+            whitelist: addrArr,
+            floorTokens: addrArr,
+            erc20Assets: erc20Assets,
+            erc721Assets: erc721Assets
+        });
+
+        testOrderHashMatchesEthersEIP712Implementation(order);
+    }
 
     function testOrderHashMatchesEthersEIP712Implementation(PuttyV2.Order memory order) public {
         // arrange
         string[] memory runJsInputs = new string[](3);
         runJsInputs[0] = "node";
-        runJsInputs[1] = "./test/differential/scripts/hash-order-cli.js";
+        runJsInputs[1] = "./test/differential/scripts/hash-order/hash-order-cli.js";
         runJsInputs[2] = toHexString(abi.encode(order));
 
         // act
         bytes memory ethersResult = vm.ffi(runJsInputs);
         bytes32 ethersGeneratedHash = abi.decode(ethersResult, (bytes32));
-        bytes32 orderHash = ECDSA.toTypedDataHash(p.domainSeparatorV4(), p.hashOrder(order));
+        bytes32 orderHash = p.hashOrder(order);
 
         // assert
         assertEq(orderHash, ethersGeneratedHash, "Should have generated same hash");

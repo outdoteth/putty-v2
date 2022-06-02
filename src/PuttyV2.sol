@@ -89,8 +89,7 @@ contract PuttyV2 is EIP712, ERC721 {
         bytes32 orderHash = hashOrder(order);
 
         // check signature is valid using EIP-712
-        bytes32 messageDigest = _hashTypedDataV4(orderHash);
-        require(SignatureChecker.isValidSignatureNow(order.maker, messageDigest, signature), "Invalid signature");
+        require(SignatureChecker.isValidSignatureNow(order.maker, orderHash, signature), "Invalid signature");
 
         // check order is not cancelled
         require(!cancelledOrders[orderHash], "Order has been cancelled");
@@ -177,6 +176,8 @@ contract PuttyV2 is EIP712, ERC721 {
                 keccak256(encodeERC721Assets(order.erc721Assets))
             )
         );
+
+        orderHash = _hashTypedDataV4(orderHash);
     }
 
     function encodeERC721Assets(ERC721Asset[] memory arr) public pure returns (bytes memory encoded) {

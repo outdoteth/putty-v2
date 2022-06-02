@@ -1,9 +1,10 @@
 [default]
 solc_version = "0.8.13"
-fuzz_runs = 10
+fuzz_runs = 1
 optimizer_runs = 2000
 optimizer = true
 path_pattern_inverse = "./differential/*"
 
 [ci]
+
 fuzz-runs = 100

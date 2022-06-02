@@ -8,6 +8,8 @@ import "src/PuttyV2.sol";
 abstract contract Fixture is Test {
     PuttyV2 internal p;
 
+    uint256 internal babePrivateKey;
+    uint256 internal bobPrivateKey;
     address internal babe;
     address internal bob;
     string internal checkpointLabel;
@@ -16,10 +18,12 @@ abstract contract Fixture is Test {
     constructor() {
         p = new PuttyV2();
 
-        babe = address(0xbabe);
+        babePrivateKey = uint256(0xbabe);
+        babe = vm.addr(babePrivateKey);
         vm.label(babe, "Babe");
 
-        bob = address(0xb0b);
+        bobPrivateKey = uint256(0xb0b);
+        bob = vm.addr(bobPrivateKey);
         vm.label(bob, "Bob");
 
         // make sure timestamp is not 0
