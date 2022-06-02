@@ -2,16 +2,25 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
+import "solmate/tokens/ERC721.sol";
+
+import "../mocks/MockWeth.sol";
+import "../mocks/MockERC721.sol";
+import "../mocks/MockERC20.sol";
 
 import "src/PuttyV2.sol";
 
-abstract contract Fixture is Test {
+abstract contract Fixture is Test, ERC721TokenReceiver {
     PuttyV2 internal p;
+    MockERC721 internal bayc;
+    MockERC20 internal link;
+    MockWeth internal weth;
 
     uint256 internal babePrivateKey;
     uint256 internal bobPrivateKey;
     address internal babe;
     address internal bob;
+
     string internal checkpointLabel;
     uint256 internal checkpointGasLeft;
 
@@ -22,6 +31,10 @@ abstract contract Fixture is Test {
     uint256[] internal __floorAssetTokenIds;
 
     constructor() {
+        bayc = new MockERC721("Mock Bored Ape Yacht Club", "MBAYC");
+        link = new MockERC20("Mock Chainlink", "LINK", 18);
+        weth = new MockWeth();
+
         p = new PuttyV2();
 
         babePrivateKey = uint256(0xbabe);
