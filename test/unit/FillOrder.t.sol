@@ -15,7 +15,19 @@ contract TestEIP712 is Fixture {
     PuttyV2.ERC721Asset[] internal erc721Assets;
     uint256[] internal floorAssetTokenIds;
 
-    function setUp() public {}
+    function setUp() public {
+        PuttyV2.Order memory order = defaultOrder();
+
+        vm.deal(address(this), order.premium);
+        weth.deposit{value: order.premium}();
+        weth.approve(address(p), order.premium);
+
+        vm.startPrank(babe);
+        vm.deal(babe, order.premium);
+        weth.deposit{value: order.premium}();
+        weth.approve(address(p), order.premium);
+        vm.stopPrank();
+    }
 
     function testItCannotUseInvalidSignature() public {
         // arrange
@@ -81,6 +93,9 @@ contract TestEIP712 is Fixture {
     function testItCannotSendIncorrectAmountOfFloorTokenIds() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
+        order.isLong = true;
+        order.isCall = true;
+
         floorAssetTokenIds.push(0x1337);
         floorAssetTokenIds.push(0x1337);
         floorTokens.push(bob);
@@ -123,6 +138,9 @@ contract TestEIP712 is Fixture {
     function testItSavesFloorAssetTokenIds() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
+        order.isLong = true;
+        order.isCall = true;
+
         floorTokens.push(bob);
         floorTokens.push(bob);
 
@@ -168,7 +186,53 @@ contract TestEIP712 is Fixture {
         );
     }
 
-    function testItSendsPremiumToMakerIfShort() public {}
+    function testItSendsPremiumToMakerIfShort() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = false;
+        bytes memory signature = signOrder(babePrivateKey, order);
 
-    function testItSendsPremiumToTakerIfLong() public {}
+        // act
+        uint256 takerBalanceBefore = weth.balanceOf(address(this));
+        uint256 makerBalanceBefore = weth.balanceOf(order.maker);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // assert
+        assertEq(
+            weth.balanceOf(order.maker) - makerBalanceBefore,
+            order.premium,
+            "Should have transferred premium to maker"
+        );
+
+        assertEq(
+            takerBalanceBefore - weth.balanceOf(address(this)),
+            order.premium,
+            "Should have transferred premium from taker"
+        );
+    }
+
+    function testItSendsPremiumToTakerIfLong() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = true;
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        uint256 takerBalanceBefore = weth.balanceOf(address(this));
+        uint256 makerBalanceBefore = weth.balanceOf(order.maker);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // assert
+        assertEq(
+            weth.balanceOf(address(this)) - takerBalanceBefore,
+            order.premium,
+            "Should have transferred premium to taker"
+        );
+
+        assertEq(
+            makerBalanceBefore - weth.balanceOf(order.maker),
+            order.premium,
+            "Should have transferred premium from maker"
+        );
+    }
 }

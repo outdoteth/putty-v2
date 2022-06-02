@@ -3,11 +3,14 @@ pragma solidity ^0.8.13;
 
 import "openzeppelin/utils/cryptography/SignatureChecker.sol";
 import "openzeppelin/utils/cryptography/draft-EIP712.sol";
+import "solmate/utils/SafeTransferLib.sol";
 import "solmate/tokens/ERC721.sol";
 
 import "forge-std/console.sol";
 
 contract PuttyV2 is EIP712, ERC721 {
+    using SafeTransferLib for ERC20;
+
     struct ERC20Asset {
         address token;
         uint256 tokenAmount;
@@ -102,7 +105,7 @@ contract PuttyV2 is EIP712, ERC721 {
         _mint(order.maker, uint256(orderHash));
 
         // create opposite side position for taker
-        Order memory oppositeOrder = order;
+        Order memory oppositeOrder = abi.decode(abi.encode(order), (Order)); // decode/encode to get a copy instead of reference
         oppositeOrder.isLong = !order.isLong;
         bytes32 oppositeOrderHash = hashOrder(oppositeOrder);
         _mint(msg.sender, uint256(oppositeOrderHash));
@@ -116,6 +119,10 @@ contract PuttyV2 is EIP712, ERC721 {
         /*
             ~~~ INTERACTIONS ~~~
         */
+
+        order.isLong
+            ? ERC20(order.baseAsset).safeTransferFrom(order.maker, msg.sender, order.premium)
+            : ERC20(order.baseAsset).safeTransferFrom(msg.sender, order.maker, order.premium);
 
         // filling short put
         if (!order.isLong && !order.isCall) {

@@ -73,10 +73,10 @@ abstract contract Fixture is Test, ERC721TokenReceiver {
         order = PuttyV2.Order({
             maker: babe,
             isCall: true,
-            isLong: true,
-            baseAsset: bob,
+            isLong: false,
+            baseAsset: address(weth),
             strike: 1,
-            premium: 2,
+            premium: 0x1337,
             duration: 3,
             expiration: 4,
             nonce: 5,
