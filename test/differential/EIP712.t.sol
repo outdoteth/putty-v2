@@ -15,7 +15,7 @@ contract TestEIP712 is Fixture {
         // arrange
         string[] memory runJsInputs = new string[](3);
         runJsInputs[0] = "node";
-        runJsInputs[1] = "./test/differential/scripts/signOrder.js";
+        runJsInputs[1] = "./test/differential/scripts/hash-order-cli.js";
         runJsInputs[2] = toHexString(abi.encode(order));
 
         // act
