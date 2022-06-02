@@ -3,10 +3,21 @@ pragma solidity ^0.8.13;
 
 import "openzeppelin/utils/cryptography/SignatureChecker.sol";
 import "openzeppelin/utils/cryptography/draft-EIP712.sol";
+import "solmate/tokens/ERC721.sol";
 
 import "forge-std/console.sol";
 
-contract PuttyV2 is EIP712 {
+contract PuttyV2 is EIP712, ERC721 {
+    struct ERC20Asset {
+        address token;
+        uint256 tokenAmount;
+    }
+
+    struct ERC721Asset {
+        address token;
+        uint256 tokenId;
+    }
+
     struct Order {
         address maker;
         bool isCall;
@@ -19,44 +30,62 @@ contract PuttyV2 is EIP712 {
         uint256 nonce;
         address[] whitelist;
         address[] floorTokens;
-        address[] erc20Tokens;
-        address[] erc721Tokens;
-        uint256[] erc20Amounts;
-        uint256[] erc721Ids;
+        ERC20Asset[] erc20Assets;
+        ERC721Asset[] erc721Assets;
     }
 
-    bytes32 constant ORDER_TYPE_HASH =
+    bytes32 public constant ERC721ASSET_TYPE_HASH =
+        keccak256(abi.encodePacked("ERC721Asset(address token,uint256 tokenId)"));
+
+    bytes32 public constant ERC20ASSET_TYPE_HASH =
+        keccak256(abi.encodePacked("ERC20Asset(address token,uint256 tokenAmount)"));
+
+    bytes32 public constant ORDER_TYPE_HASH =
         keccak256(
             abi.encodePacked(
                 "Order(",
-                "address maker",
-                "bool isCall",
-                "bool isLong",
-                "address baseAsset",
-                "uint256 strike",
-                "uint256 premium",
-                "uint256 duration",
-                "uint256 expiration",
-                "uint256 nonce",
-                "address[] whitelist",
-                "address[] floorTokens",
-                "address[] erc20Tokens",
-                "address[] erc721Tokens",
-                "uint256[] erc20Amounts",
-                "uint256[] erc721Ids",
-                ")"
+                "address maker,",
+                "bool isCall,",
+                "bool isLong,",
+                "address baseAsset,",
+                "uint256 strike,",
+                "uint256 premium,",
+                "uint256 duration,",
+                "uint256 expiration,",
+                "uint256 nonce,"
+                "address[] whitelist,",
+                "address[] floorTokens,",
+                "ERC20Asset[] erc20Assets,",
+                "ERC721Asset[] erc721Assets",
+                ")",
+                "ERC20Asset(address token,uint256 tokenAmount)",
+                "ERC721Asset(address token,uint256 tokenId)"
             )
         );
 
     mapping(bytes32 => bool) public cancelledOrders;
+    mapping(uint256 => uint256[]) public positionFloorAssetTokenIds;
+    mapping(uint256 => uint256) public positionExpirations;
 
-    constructor() EIP712("Putty", "2.0") {}
+    constructor() EIP712("Putty", "2.0") ERC721("Putty", "OPUT") {}
+
+    function tokenURI(uint256 id) public pure override returns (string memory) {
+        return "";
+    }
+
+    function domainSeparatorV4() public view returns (bytes32) {
+        return _domainSeparatorV4();
+    }
 
     function fillOrder(
         Order memory order,
         bytes calldata signature,
         uint256[] calldata floorAssetTokenIds
     ) public {
+        /*
+            ~~~ CHECKS ~~~
+        */
+
         bytes32 orderHash = hashOrder(order);
 
         // check signature is valid using EIP-712
@@ -74,13 +103,48 @@ contract PuttyV2 is EIP712 {
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
             : require(floorAssetTokenIds.length == 0 && order.floorTokens.length == 0, "Invalid floor tokens");
 
+        /*
+            ~~~ EFFECTS ~~~
+        */
+
+        // create side position for maker
+        _mint(order.maker, uint256(orderHash));
+
+        // create opposite side position for taker
         Order memory oppositeOrder = order;
         oppositeOrder.isLong = !order.isLong;
         bytes32 oppositeOrderHash = hashOrder(oppositeOrder);
+        _mint(msg.sender, uint256(oppositeOrderHash));
 
-        // create side position for maker
+        // save floorAssetTokenIds
+        positionFloorAssetTokenIds[uint256(orderHash)] = floorAssetTokenIds;
 
-        // create opposite side position for taker
+        // save the position expiration
+        positionExpirations[uint256(orderHash)] = block.timestamp + order.duration;
+
+        /*
+            ~~~ INTERACTIONS ~~~
+        */
+
+        // filling short put
+        if (!order.isLong && !order.isCall) {
+            return;
+        }
+
+        // filling short call
+        if (!order.isLong && order.isCall) {
+            return;
+        }
+
+        // filling long put
+        if (order.isLong && !order.isCall) {
+            return;
+        }
+
+        // filling long call
+        if (order.isLong && order.isCall) {
+            return;
+        }
     }
 
     function isWhitelisted(address[] memory whitelist, address target) public pure returns (bool) {
@@ -94,16 +158,7 @@ contract PuttyV2 is EIP712 {
     }
 
     // hash order based on EIP-712 encoding
-    function hashOrder(Order memory order) public pure returns (bytes32 orderHash) {
-        bytes memory arrayEncodings = abi.encode(
-            keccak256(abi.encodePacked(order.whitelist)),
-            keccak256(abi.encodePacked(order.floorTokens)),
-            keccak256(abi.encodePacked(order.erc20Tokens)),
-            keccak256(abi.encodePacked(order.erc721Tokens)),
-            keccak256(abi.encodePacked(order.erc20Amounts)),
-            keccak256(abi.encodePacked(order.erc721Ids))
-        );
-
+    function hashOrder(Order memory order) public view returns (bytes32 orderHash) {
         orderHash = keccak256(
             abi.encode(
                 ORDER_TYPE_HASH,
@@ -116,12 +171,29 @@ contract PuttyV2 is EIP712 {
                 order.duration,
                 order.expiration,
                 order.nonce,
-                arrayEncodings
+                keccak256(abi.encodePacked(order.whitelist)),
+                keccak256(abi.encodePacked(order.floorTokens)),
+                keccak256(encodeERC20Assets(order.erc20Assets)),
+                keccak256(encodeERC721Assets(order.erc721Assets))
             )
         );
     }
 
-    function hashAddressArray(address[] calldata arr) public view {}
+    function encodeERC721Assets(ERC721Asset[] memory arr) public pure returns (bytes memory encoded) {
+        for (uint256 i = 0; i < arr.length; i++) {
+            encoded = abi.encodePacked(
+                encoded,
+                keccak256(abi.encode(ERC721ASSET_TYPE_HASH, arr[i].token, arr[i].tokenId))
+            );
+        }
+    }
 
-    function hashUint256Array(uint256[] calldata arr) public view {}
+    function encodeERC20Assets(ERC20Asset[] memory arr) public pure returns (bytes memory encoded) {
+        for (uint256 i = 0; i < arr.length; i++) {
+            encoded = abi.encodePacked(
+                encoded,
+                keccak256(abi.encode(ERC20ASSET_TYPE_HASH, arr[i].token, arr[i].tokenAmount))
+            );
+        }
+    }
 }

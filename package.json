@@ -18,6 +18,7 @@
     "lint:check": "npm run prettier:check && npm run solhint:check"
   },
   "dependencies": {
+    "ethers": "^5.6.8",
     "prettier": "^2.6.2",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solhint": "^3.3.7"
