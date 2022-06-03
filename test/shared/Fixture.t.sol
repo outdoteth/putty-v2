@@ -75,7 +75,7 @@ abstract contract Fixture is Test, ERC721TokenReceiver {
             isCall: true,
             isLong: false,
             baseAsset: address(weth),
-            strike: 1,
+            strike: 0x1337737,
             premium: 0x1337,
             duration: 3,
             expiration: 4,

@@ -8,7 +8,7 @@ import "solmate/tokens/ERC721.sol";
 
 import "forge-std/console.sol";
 
-contract PuttyV2 is EIP712, ERC721 {
+contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
     using SafeTransferLib for ERC20;
 
     struct ERC20Asset {
@@ -120,29 +120,75 @@ contract PuttyV2 is EIP712, ERC721 {
             ~~~ INTERACTIONS ~~~
         */
 
+        // transfer premium to whoever is short from whomever is long
         order.isLong
             ? ERC20(order.baseAsset).safeTransferFrom(order.maker, msg.sender, order.premium)
             : ERC20(order.baseAsset).safeTransferFrom(msg.sender, order.maker, order.premium);
 
         // filling short put
+        // transfer strike from maker to contract
         if (!order.isLong && !order.isCall) {
-            return;
-        }
-
-        // filling short call
-        if (!order.isLong && order.isCall) {
+            ERC20(order.baseAsset).safeTransferFrom(order.maker, address(this), order.strike);
             return;
         }
 
         // filling long put
+        // transfer strike from taker to contract
         if (order.isLong && !order.isCall) {
+            ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
+            return;
+        }
+
+        // filling short call
+        // transfer assets from maker to contract
+        if (!order.isLong && order.isCall) {
+            for (uint256 i = 0; i < order.erc20Assets.length; i++) {
+                ERC20(order.erc20Assets[i].token).safeTransferFrom(
+                    order.maker,
+                    address(this),
+                    order.erc20Assets[i].tokenAmount
+                );
+            }
+
+            for (uint256 i = 0; i < order.erc721Assets.length; i++) {
+                ERC721(order.erc721Assets[i].token).safeTransferFrom(
+                    order.maker,
+                    address(this),
+                    order.erc721Assets[i].tokenId
+                );
+            }
+
             return;
         }
 
         // filling long call
+        // transfer assets from taker to contract
         if (order.isLong && order.isCall) {
+            for (uint256 i = 0; i < order.erc20Assets.length; i++) {
+                ERC20(order.erc20Assets[i].token).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    order.erc20Assets[i].tokenAmount
+                );
+            }
+
+            for (uint256 i = 0; i < order.erc721Assets.length; i++) {
+                ERC721(order.erc721Assets[i].token).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    order.erc721Assets[i].tokenId
+                );
+            }
+
+            for (uint256 i = 0; i < order.floorTokens.length; i++) {
+                ERC721(order.floorTokens[i]).safeTransferFrom(msg.sender, address(this), floorAssetTokenIds[i]);
+            }
+
             return;
         }
+
+        // should never reach here
+        assert(false);
     }
 
     function isWhitelisted(address[] memory whitelist, address target) public pure returns (bool) {

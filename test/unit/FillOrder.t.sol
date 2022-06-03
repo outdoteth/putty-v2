@@ -18,14 +18,14 @@ contract TestEIP712 is Fixture {
     function setUp() public {
         PuttyV2.Order memory order = defaultOrder();
 
-        vm.deal(address(this), order.premium);
-        weth.deposit{value: order.premium}();
-        weth.approve(address(p), order.premium);
+        vm.deal(address(this), order.premium + order.strike);
+        weth.deposit{value: order.premium + order.strike}();
+        weth.approve(address(p), order.premium + order.strike);
 
         vm.startPrank(babe);
-        vm.deal(babe, order.premium);
-        weth.deposit{value: order.premium}();
-        weth.approve(address(p), order.premium);
+        vm.deal(babe, order.premium + order.strike);
+        weth.deposit{value: order.premium + order.strike}();
+        weth.approve(address(p), order.premium + order.strike);
         vm.stopPrank();
     }
 
@@ -141,12 +141,16 @@ contract TestEIP712 is Fixture {
         order.isLong = true;
         order.isCall = true;
 
-        floorTokens.push(bob);
-        floorTokens.push(bob);
+        floorTokens.push(address(bayc));
+        floorTokens.push(address(bayc));
 
         order.floorTokens = floorTokens;
-        floorAssetTokenIds.push(0x1337);
-        floorAssetTokenIds.push(0x133);
+
+        bayc.mint(address(this), 1);
+        bayc.mint(address(this), 2);
+        bayc.setApprovalForAll(address(p), true);
+        floorAssetTokenIds.push(1);
+        floorAssetTokenIds.push(2);
 
         bytes memory signature = signOrder(babePrivateKey, order);
         bytes32 orderHash = p.hashOrder(order);
@@ -234,5 +238,111 @@ contract TestEIP712 is Fixture {
             order.premium,
             "Should have transferred premium from maker"
         );
+    }
+
+    function testItTransfersStrikeFromMakerToPuttyForShortPut() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = false;
+        order.isCall = false;
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        uint256 makerBalanceBefore = weth.balanceOf(order.maker);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        //  assert
+        assertEq(
+            makerBalanceBefore - weth.balanceOf(order.maker),
+            order.strike - order.premium,
+            "Should have transferred strike from maker when filling short put"
+        );
+    }
+
+    function testItTransfersStrikeFromTakerToPuttyForLongPut() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = true;
+        order.isCall = false;
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        uint256 takerBalanceBefore = weth.balanceOf(address(this));
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        //  assert
+        assertEq(
+            takerBalanceBefore - weth.balanceOf(address(this)),
+            order.strike - order.premium,
+            "Should have transferred strike from taker to Putty when filling short put"
+        );
+    }
+
+    function testItTransfersAssetsFromMakerToPuttyForShortCall() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = false;
+        order.isCall = true;
+
+        uint256 tokenAmount = 313;
+        uint256 tokenId = 12;
+        erc20Assets.push(PuttyV2.ERC20Asset({token: address(link), tokenAmount: tokenAmount}));
+        erc721Assets.push(PuttyV2.ERC721Asset({token: address(bayc), tokenId: tokenId}));
+
+        order.erc20Assets = erc20Assets;
+        order.erc721Assets = erc721Assets;
+
+        vm.startPrank(babe);
+        link.mint(babe, tokenAmount);
+        link.approve(address(p), tokenAmount);
+        bayc.mint(babe, tokenId);
+        bayc.approve(address(p), tokenId);
+        vm.stopPrank();
+
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // assert
+        assertEq(link.balanceOf(address(p)), tokenAmount, "Should have sent link from maker to contract");
+        assertEq(bayc.ownerOf(tokenId), address(p), "Should have sent bayc from maker to contract");
+    }
+
+    function testItTransfersAssetsFromTakerToPuttyForLongCall() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = true;
+        order.isCall = true;
+
+        uint256 tokenAmount = 313;
+        uint256 tokenId = 12;
+        uint256 floorTokenId = 58;
+
+        erc20Assets.push(PuttyV2.ERC20Asset({token: address(link), tokenAmount: tokenAmount}));
+        erc721Assets.push(PuttyV2.ERC721Asset({token: address(bayc), tokenId: tokenId}));
+        floorTokens.push(address(bayc));
+        floorAssetTokenIds.push(floorTokenId);
+
+        order.erc20Assets = erc20Assets;
+        order.erc721Assets = erc721Assets;
+        order.floorTokens = floorTokens;
+
+        link.mint(address(this), tokenAmount);
+        link.approve(address(p), tokenAmount);
+        bayc.mint(address(this), tokenId);
+        bayc.approve(address(p), tokenId);
+        bayc.mint(address(this), floorTokenId);
+        bayc.approve(address(p), floorTokenId);
+
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // assert
+        assertEq(link.balanceOf(address(p)), tokenAmount, "Should have sent link from taker to contract");
+        assertEq(bayc.ownerOf(tokenId), address(p), "Should have sent bayc from taker to contract");
+        assertEq(bayc.ownerOf(floorTokenId), address(p), "Should have sent floor bayc from taker to contract");
     }
 }
