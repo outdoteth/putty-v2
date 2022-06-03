@@ -8,7 +8,7 @@ import "openzeppelin/utils/cryptography/ECDSA.sol";
 import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
-contract TestEIP712 is Fixture {
+contract TestFillOrder is Fixture {
     address[] internal whitelist;
     address[] internal floorTokens;
     PuttyV2.ERC20Asset[] internal erc20Assets;

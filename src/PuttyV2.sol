@@ -69,6 +69,7 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
     mapping(bytes32 => bool) public cancelledOrders;
     mapping(uint256 => uint256[]) public positionFloorAssetTokenIds;
     mapping(uint256 => uint256) public positionExpirations;
+    mapping(uint256 => bool) public exercisedPositions;
 
     constructor() EIP712("Putty", "2.0") ERC721("Putty", "OPUT") {}
 
@@ -191,6 +192,69 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
 
         // should never reach here
         assert(false);
+    }
+
+    function exercise(Order memory order, uint256[] calldata floorAssetTokenIds) public {
+        /*
+            ~~~ CHECKS ~~~
+        */
+
+        bytes32 orderHash = hashOrder(order);
+
+        // check user owns the position
+        require(ownerOf(uint256(orderHash)) == msg.sender, "Not owner");
+
+        // check position is long
+        require(order.isLong, "Can only exercise long positions");
+
+        // check position has not expired
+        require(positionExpirations[uint256(orderHash)] < block.timestamp, "Position has expired");
+
+        // check floor asset token ids length is 0 unless the position `type` is put
+        !order.isCall
+            ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
+            : require(floorAssetTokenIds.length == 0 && order.floorTokens.length == 0, "Invalid floor tokens length");
+
+        /*
+            ~~~ EFFECTS ~~~
+        */
+
+        // send the long position to 0xdead.
+        // instead of doing a standard burn by sending to 0x000...000, sending
+        // to 0xdead ensures that the same position id cannot be minted again.
+        transferFrom(msg.sender, address(0xdead), uint256(orderHash));
+
+        // mark the position as exercised
+        exercisedPositions[uint256(orderHash)] = true;
+
+        // save the floor asset token ids
+        positionFloorAssetTokenIds[uint256(orderHash)] = floorAssetTokenIds;
+
+        /*
+            ~~~ INTERACTIONS ~~~
+        */
+
+        if (order.isCall) {
+            // ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
+            // for (uint256 i = 0; i < order.erc20Assets.length; i++) {
+            //     ERC20(order.erc20Assets[i].token).safeTransferFrom(
+            //         address(this),
+            //         msg.sender,
+            //         order.erc20Assets[i].tokenAmount
+            //     );
+            // }
+            // for (uint256 i = 0; i < order.erc721Assets.length; i++) {
+            //     ERC721(order.erc721Assets[i].token).safeTransferFrom(
+            //         address(this),
+            //         msg.sender,
+            //         order.erc721Assets[i].tokenId
+            //     );
+            // }
+            // uint256[] memory callFloorAssetTokenIds =
+            // for (uint256 i = 0; i < order.floorTokens.length; i++) {
+            //     ERC721(order.floorTokens[i]).safeTransferFrom(msg.sender, address(this), floorAssetTokenIds[i]);
+            // }
+        } else {}
     }
 
     function isWhitelisted(address[] memory whitelist, address target) public pure returns (bool) {
