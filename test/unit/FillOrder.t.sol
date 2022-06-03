@@ -345,4 +345,44 @@ contract TestEIP712 is Fixture {
         assertEq(bayc.ownerOf(tokenId), address(p), "Should have sent bayc from taker to contract");
         assertEq(bayc.ownerOf(floorTokenId), address(p), "Should have sent floor bayc from taker to contract");
     }
+
+    function testItCannotFillOrderTwice() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        p.fillOrder(order, signature, floorAssetTokenIds);
+        vm.expectRevert("ALREADY_MINTED");
+        p.fillOrder(order, signature, floorAssetTokenIds);
+    }
+
+    function testItFillsOrder(PuttyV2.Order memory order) public {
+        // arrange
+        order.isCall = false;
+        order.isLong = false;
+        order.maker = babe;
+        order.floorTokens = new address[](0);
+        order.baseAsset = address(weth);
+
+        order.premium = bound(order.premium, 0, type(uint256).max - order.strike);
+        order.strike = bound(order.strike, 0, type(uint256).max - order.premium);
+
+        vm.deal(address(this), order.premium);
+        weth.deposit{value: order.premium}();
+        weth.approve(address(p), order.premium);
+
+        vm.startPrank(babe);
+        vm.deal(babe, order.strike);
+        weth.deposit{value: order.strike}();
+        weth.approve(address(p), order.strike);
+        vm.stopPrank();
+
+        whitelist.push(address(this));
+        order.whitelist = whitelist;
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        p.fillOrder(order, signature, floorAssetTokenIds);
+    }
 }
