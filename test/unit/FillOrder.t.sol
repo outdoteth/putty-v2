@@ -15,6 +15,8 @@ contract TestEIP712 is Fixture {
     PuttyV2.ERC721Asset[] internal erc721Assets;
     uint256[] internal floorAssetTokenIds;
 
+    receive() external payable {}
+
     function setUp() public {
         PuttyV2.Order memory order = defaultOrder();
 
@@ -364,25 +366,29 @@ contract TestEIP712 is Fixture {
         order.maker = babe;
         order.floorTokens = new address[](0);
         order.baseAsset = address(weth);
-
+        order.duration = bound(order.duration, 0, 10_000 days);
         order.premium = bound(order.premium, 0, type(uint256).max - order.strike);
         order.strike = bound(order.strike, 0, type(uint256).max - order.premium);
 
-        vm.deal(address(this), order.premium);
-        weth.deposit{value: order.premium}();
+        deal(address(weth), address(this), order.premium);
         weth.approve(address(p), order.premium);
 
         vm.startPrank(babe);
-        vm.deal(babe, order.strike);
-        weth.deposit{value: order.strike}();
+        deal(address(weth), babe, order.strike);
         weth.approve(address(p), order.strike);
         vm.stopPrank();
 
         whitelist.push(address(this));
         order.whitelist = whitelist;
         bytes memory signature = signOrder(babePrivateKey, order);
+        bytes32 orderHash = p.hashOrder(order);
 
         // act
         p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // assert
+        assertEq(weth.balanceOf(address(p)), order.strike);
+        assertEq(weth.balanceOf(order.maker), order.premium);
+        assertEq(p.ownerOf(uint256(orderHash)), order.maker);
     }
 }

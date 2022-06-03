@@ -92,6 +92,8 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
         // check msg.sender is allowed to fill the order
         require(order.whitelist.length == 0 || isWhitelisted(order.whitelist, msg.sender), "Not whitelisted");
 
+        require(order.duration < 10_000 days, "Duration too long");
+
         // check floor asset token ids length is 0 unless the order `type` is call and `side` is long
         order.isCall && order.isLong
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
