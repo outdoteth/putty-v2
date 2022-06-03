@@ -178,15 +178,14 @@ contract TestFillOrder is Fixture {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
         bytes memory signature = signOrder(babePrivateKey, order);
-        bytes32 orderHash = p.hashOrder(order);
         uint256 expectedExpiration = block.timestamp + order.duration;
 
         // act
-        p.fillOrder(order, signature, floorAssetTokenIds);
+        uint256 positionId = p.fillOrder(order, signature, floorAssetTokenIds);
 
         // assert
         assertEq(
-            p.positionExpirations(uint256(orderHash)),
+            p.positionExpirations(positionId),
             expectedExpiration,
             "Should have set expiration to block.timestamp + duration"
         );
@@ -369,6 +368,7 @@ contract TestFillOrder is Fixture {
         order.duration = bound(order.duration, 0, 10_000 days);
         order.premium = bound(order.premium, 0, type(uint256).max - order.strike);
         order.strike = bound(order.strike, 0, type(uint256).max - order.premium);
+        order.expiration = block.timestamp + 1 days;
 
         deal(address(weth), address(this), order.premium);
         weth.approve(address(p), order.premium);
