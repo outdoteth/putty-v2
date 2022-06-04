@@ -147,45 +147,16 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
         // filling short call
         // transfer assets from maker to contract
         if (!order.isLong && order.isCall) {
-            for (uint256 i = 0; i < order.erc20Assets.length; i++) {
-                ERC20(order.erc20Assets[i].token).safeTransferFrom(
-                    order.maker,
-                    address(this),
-                    order.erc20Assets[i].tokenAmount
-                );
-            }
-
-            for (uint256 i = 0; i < order.erc721Assets.length; i++) {
-                ERC721(order.erc721Assets[i].token).safeTransferFrom(
-                    order.maker,
-                    address(this),
-                    order.erc721Assets[i].tokenId
-                );
-            }
+            _transferERC20sIn(order.erc20Assets, order.maker);
+            _transferERC721sIn(order.erc721Assets, order.maker);
         }
 
         // filling long call
         // transfer assets from taker to contract
         if (order.isLong && order.isCall) {
-            for (uint256 i = 0; i < order.erc20Assets.length; i++) {
-                ERC20(order.erc20Assets[i].token).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    order.erc20Assets[i].tokenAmount
-                );
-            }
-
-            for (uint256 i = 0; i < order.erc721Assets.length; i++) {
-                ERC721(order.erc721Assets[i].token).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    order.erc721Assets[i].tokenId
-                );
-            }
-
-            for (uint256 i = 0; i < order.floorTokens.length; i++) {
-                ERC721(order.floorTokens[i]).safeTransferFrom(msg.sender, address(this), floorAssetTokenIds[i]);
-            }
+            _transferERC20sIn(order.erc20Assets, msg.sender);
+            _transferERC721sIn(order.erc721Assets, msg.sender);
+            _transferFloorsIn(order.floorTokens, floorAssetTokenIds, msg.sender);
         }
     }
 
@@ -263,28 +234,76 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
             // transfer strike from putty to exerciser
             ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike);
 
-            // transfer erc20 assets from exerciser to putty
-            for (uint256 i = 0; i < order.erc20Assets.length; i++) {
-                ERC20(order.erc20Assets[i].token).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    order.erc20Assets[i].tokenAmount
-                );
-            }
+            // transfer assets from exerciser to putty
+            _transferERC20sIn(order.erc20Assets, msg.sender);
+            _transferERC721sIn(order.erc721Assets, msg.sender);
+            _transferFloorsIn(order.floorTokens, floorAssetTokenIds, msg.sender);
+        }
+    }
 
-            // transfer erc721 assets from exerciser to putty
-            for (uint256 i = 0; i < order.erc721Assets.length; i++) {
-                ERC721(order.erc721Assets[i].token).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    order.erc721Assets[i].tokenId
-                );
-            }
+    function withdraw(Order memory order) public {
+        /*
+            ~~~ CHECKS ~~~
+        */
 
-            // transfer erc721 floor assets from exerciser to putty
-            for (uint256 i = 0; i < order.floorTokens.length; i++) {
-                ERC721(order.floorTokens[i]).safeTransferFrom(msg.sender, address(this), floorAssetTokenIds[i]);
-            }
+        // check order is short
+        require(!order.isLong, "Can only withdraw short positions");
+
+        bytes32 orderHash = hashOrder(order);
+
+        // check msg.sender owns the position
+        require(ownerOf(uint256(orderHash)) == msg.sender, "Not owner");
+
+        Order memory oppositeOrder = abi.decode(abi.encode(order), (Order)); // decode/encode to get a copy instead of reference
+        oppositeOrder.isLong = true;
+        uint256 longPositionId = uint256(hashOrder(oppositeOrder));
+
+        // check long position has either been exercised or is expired
+        require(
+            block.timestamp > positionExpirations[longPositionId] || exercisedPositions[longPositionId],
+            "Must be exercised or expired"
+        );
+
+        /*
+            ~~~ EFFECTS ~~~
+        */
+
+        // send the short position to 0xdead.
+        // instead of doing a standard burn by sending to 0x000...000, sending
+        // to 0xdead ensures that the same position id cannot be minted again.
+        transferFrom(msg.sender, address(0xdead), uint256(orderHash));
+
+        /*
+            ~~~ INTERACTIONS ~~~
+        */
+
+        if (order.isCall) {
+            if (exercisedPositions[longPositionId]) {} else {}
+        } else {
+            if (exercisedPositions[longPositionId]) {} else {}
+        }
+    }
+
+    function _transferERC20sIn(ERC20Asset[] memory assets, address from) internal {
+        for (uint256 i = 0; i < assets.length; i++) {
+            ERC20(assets[i].token).safeTransferFrom(from, address(this), assets[i].tokenAmount);
+        }
+    }
+
+    function _transferERC721sIn(ERC721Asset[] memory assets, address from) internal {
+        for (uint256 i = 0; i < assets.length; i++) {
+            ERC721(assets[i].token).safeTransferFrom(from, address(this), assets[i].tokenId);
+        }
+    }
+
+    function _transferFloorsIn(
+        address[] memory floorTokens,
+        uint256[] memory floorTokenIds,
+        address from
+    ) internal {
+        // transfer erc721 floor assets from exerciser to putty
+        for (uint256 i = 0; i < floorTokens.length; i++) {
+            ERC721(floorTokens[i]).safeTransferFrom(from, address(this), floorTokenIds[i]);
         }
     }
 
