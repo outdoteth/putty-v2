@@ -71,17 +71,27 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         );
 
     string public baseURI;
+    uint256 public fee;
+
     mapping(bytes32 => bool) public cancelledOrders;
     mapping(uint256 => uint256[]) public positionFloorAssetTokenIds;
     mapping(uint256 => uint256) public positionExpirations;
     mapping(uint256 => bool) public exercisedPositions;
 
-    constructor(string memory _baseURI) {
-        baseURI = _baseURI;
+    constructor(string memory _baseURI, uint256 _fee) {
+        setBaseURI(_baseURI);
+        setFee(_fee);
     }
 
     function setBaseURI(string memory _baseURI) public payable onlyOwner {
         baseURI = _baseURI;
+    }
+
+    // _fee = 100% = 1000
+    function setFee(uint256 _fee) public payable onlyOwner {
+        require(_fee < 300, "fee must be less than 3%");
+
+        fee = _fee;
     }
 
     function fillOrder(
@@ -278,7 +288,14 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             (order.isCall && exercisedPositions[longPositionId]) ||
             (!order.isCall && !exercisedPositions[longPositionId])
         ) {
-            ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike);
+            // send the fee to the owner if fee is greater than 0%
+            uint256 feeAmount;
+            if (fee > 0) {
+                feeAmount = (order.strike * fee) / 1000;
+                ERC20(order.baseAsset).safeTransfer(owner(), feeAmount);
+            }
+
+            ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike - feeAmount);
         }
 
         // transfer assets from putty to owner if put is exercised or call is expired

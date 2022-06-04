@@ -35,7 +35,7 @@ abstract contract Fixture is Test, ERC721TokenReceiver {
         link = new MockERC20("Mock Chainlink", "LINK", 18);
         weth = new MockWeth();
 
-        p = new PuttyV2("https://testing.org/tokens/");
+        p = new PuttyV2("https://testing.org/tokens/", 0);
 
         babePrivateKey = uint256(0xbabe);
         babe = vm.addr(babePrivateKey);

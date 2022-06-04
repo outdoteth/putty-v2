@@ -125,6 +125,8 @@ contract TestWithdraw is Fixture {
         vm.prank(babe);
         p.withdraw(order);
 
+        console.log(p.fee());
+
         // assert
         assertEq(
             weth.balanceOf(babe) - balanceBefore,
