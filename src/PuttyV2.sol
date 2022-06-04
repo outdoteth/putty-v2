@@ -286,6 +286,15 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
         }
     }
 
+    function cancel(Order memory order) public {
+        require(msg.sender == order.maker, "Not your order");
+
+        bytes32 orderHash = hashOrder(order);
+
+        // mark the order as cancelled
+        cancelledOrders[orderHash] = true;
+    }
+
     function _transferERC20sIn(ERC20Asset[] memory assets, address from) internal {
         for (uint256 i = 0; i < assets.length; i++) {
             ERC20(assets[i].token).safeTransferFrom(from, address(this), assets[i].tokenAmount);
@@ -303,7 +312,6 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
         uint256[] memory floorTokenIds,
         address from
     ) internal {
-        // transfer erc721 floor assets from exerciser to putty
         for (uint256 i = 0; i < floorTokens.length; i++) {
             ERC721(floorTokens[i]).safeTransferFrom(from, address(this), floorTokenIds[i]);
         }

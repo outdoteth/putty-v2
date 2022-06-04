@@ -42,7 +42,15 @@ contract TestFillOrder is Fixture {
     }
 
     function testItCannotFillOrderThatIsCancelled() public {
-        // TODO: implement this when cancelorder is available
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature = signOrder(babePrivateKey, order);
+        vm.prank(babe);
+        p.cancel(order);
+
+        // act
+        vm.expectRevert("Order has been cancelled");
+        p.fillOrder(order, signature, floorAssetTokenIds);
     }
 
     function testItCannotFillOrderIfNotWhitelisted() public {
