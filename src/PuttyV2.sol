@@ -133,9 +133,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         _mint(order.maker, uint256(orderHash));
 
         // create opposite long/short position for taker
-        Order memory oppositeOrder = abi.decode(abi.encode(order), (Order)); // decode/encode to get a copy instead of reference
-        oppositeOrder.isLong = !order.isLong;
-        positionId = uint256(hashOrder(oppositeOrder));
+        positionId = uint256(hashOppositeOrder(order));
         _mint(msg.sender, positionId);
 
         // save floorAssetTokenIds
@@ -147,6 +145,15 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         /*
             ~~~ INTERACTIONS ~~~
         */
+
+        // filling the order
+        // short call - send eth for premium to maker
+        // short put - send eth for premium to maker
+        // long call - nothing
+        // long put - send eth for strike to contract and convert to weth
+
+        // exercising the order
+        // call - send eth for strike to contract and convert to weth
 
         // transfer premium to whoever is short from whomever is long
         order.isLong
@@ -197,7 +204,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // check position has not expired
         require(block.timestamp < positionExpirations[uint256(orderHash)], "Position has expired");
 
-        // check floor asset token ids length is 0 unless the position `type` is put
+        // check floor asset token ids length is 0 unless the position type is put
         !order.isCall
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
             : require(floorAssetTokenIds.length == 0, "Invalid floor tokenIds length");
@@ -232,9 +239,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             // -- exercising a put option
 
             // save the floor asset token ids to the short position
-            Order memory oppositeOrder = abi.decode(abi.encode(order), (Order)); // decode/encode to get a copy instead of reference
-            oppositeOrder.isLong = false;
-            uint256 shortPositionId = uint256(hashOrder(oppositeOrder));
+            uint256 shortPositionId = uint256(hashOppositeOrder(order));
             positionFloorAssetTokenIds[shortPositionId] = floorAssetTokenIds;
 
             // transfer strike from putty to exerciser
@@ -260,15 +265,11 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // check msg.sender owns the position
         require(ownerOf(uint256(orderHash)) == msg.sender, "Not owner");
 
-        Order memory oppositeOrder = abi.decode(abi.encode(order), (Order)); // decode/encode to get a copy instead of reference
-        oppositeOrder.isLong = true;
-        uint256 longPositionId = uint256(hashOrder(oppositeOrder));
+        uint256 longPositionId = uint256(hashOppositeOrder(order));
+        bool isExercised = exercisedPositions[longPositionId];
 
         // check long position has either been exercised or is expired
-        require(
-            block.timestamp > positionExpirations[longPositionId] || exercisedPositions[longPositionId],
-            "Must be exercised or expired"
-        );
+        require(block.timestamp > positionExpirations[longPositionId] || isExercised, "Must be exercised or expired");
 
         /*
             ~~~ EFFECTS ~~~
@@ -284,10 +285,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         */
 
         // transfer strike to owner if put is expired or call is exercised
-        if (
-            (order.isCall && exercisedPositions[longPositionId]) ||
-            (!order.isCall && !exercisedPositions[longPositionId])
-        ) {
+        if ((order.isCall && isExercised) || (!order.isCall && !isExercised)) {
             // send the fee to the owner if fee is greater than 0%
             uint256 feeAmount;
             if (fee > 0) {
@@ -299,10 +297,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
 
         // transfer assets from putty to owner if put is exercised or call is expired
-        if (
-            (order.isCall && !exercisedPositions[longPositionId]) ||
-            (!order.isCall && exercisedPositions[longPositionId])
-        ) {
+        if ((order.isCall && !isExercised) || (!order.isCall && isExercised)) {
             _transferERC20sOut(order.erc20Assets);
             _transferERC721sOut(order.erc721Assets);
             _transferFloorsOut(
@@ -369,6 +364,15 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
 
         return false;
+    }
+
+    function hashOppositeOrder(Order memory order) public view returns (bytes32 orderHash) {
+        // use decode/encode to get a copy instead of reference
+        Order memory oppositeOrder = abi.decode(abi.encode(order), (Order));
+
+        // get the opposite side of the order (short/long)
+        oppositeOrder.isLong = !order.isLong;
+        orderHash = hashOrder(oppositeOrder);
     }
 
     // hash order based on EIP-712 encoding
