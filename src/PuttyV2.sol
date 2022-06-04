@@ -3,12 +3,16 @@ pragma solidity ^0.8.13;
 
 import "openzeppelin/utils/cryptography/SignatureChecker.sol";
 import "openzeppelin/utils/cryptography/draft-EIP712.sol";
+import "openzeppelin/utils/Strings.sol";
+import "openzeppelin/access/Ownable.sol";
 import "solmate/utils/SafeTransferLib.sol";
 import "solmate/tokens/ERC721.sol";
 
+import "./PuttyV2Nft.sol";
+
 import "forge-std/console.sol";
 
-contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
+contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Ownable {
     using SafeTransferLib for ERC20;
 
     struct ERC20Asset {
@@ -66,12 +70,19 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
             )
         );
 
+    string public baseURI;
     mapping(bytes32 => bool) public cancelledOrders;
     mapping(uint256 => uint256[]) public positionFloorAssetTokenIds;
     mapping(uint256 => uint256) public positionExpirations;
     mapping(uint256 => bool) public exercisedPositions;
 
-    constructor() EIP712("Putty", "2.0") ERC721("Putty", "OPUT") {}
+    constructor(string memory _baseURI) {
+        baseURI = _baseURI;
+    }
+
+    function setBaseURI(string memory _baseURI) public payable onlyOwner {
+        baseURI = _baseURI;
+    }
 
     function fillOrder(
         Order memory order,
@@ -385,11 +396,13 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
         }
     }
 
-    function tokenURI(uint256 id) public pure override returns (string memory) {
-        return "";
-    }
-
     function domainSeparatorV4() public view returns (bytes32) {
         return _domainSeparatorV4();
+    }
+
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        require(_ownerOf[id] != address(0), "URI query for NOT_MINTED token");
+
+        return string.concat(baseURI, Strings.toString(id));
     }
 }
