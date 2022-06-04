@@ -203,29 +203,14 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
             // transfer strike from exerciser to putty
             ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
 
-            // transfer erc20 assets to exerciser
-            for (uint256 i = 0; i < order.erc20Assets.length; i++) {
-                ERC20(order.erc20Assets[i].token).safeTransfer(msg.sender, order.erc20Assets[i].tokenAmount);
-            }
-
-            // transfer erc721 assets to exerciser
-            for (uint256 i = 0; i < order.erc721Assets.length; i++) {
-                ERC721(order.erc721Assets[i].token).safeTransferFrom(
-                    address(this),
-                    msg.sender,
-                    order.erc721Assets[i].tokenId
-                );
-            }
-
-            // transfer erc721 floor assets to exerciser
-            uint256[] memory callFloorAssetTokenIds = positionFloorAssetTokenIds[uint256(orderHash)];
-            for (uint256 i = 0; i < order.floorTokens.length; i++) {
-                ERC721(order.floorTokens[i]).safeTransferFrom(address(this), msg.sender, callFloorAssetTokenIds[i]);
-            }
+            // transfer assets from putty to exerciser
+            _transferERC20sOut(order.erc20Assets);
+            _transferERC721sOut(order.erc721Assets);
+            _transferFloorsOut(order.floorTokens, positionFloorAssetTokenIds[uint256(orderHash)]);
         } else {
             // -- exercising a put option
 
-            // save the floor asset token ids to the short position (EFFECT)
+            // save the floor asset token ids to the short position
             Order memory oppositeOrder = abi.decode(abi.encode(order), (Order)); // decode/encode to get a copy instead of reference
             oppositeOrder.isLong = false;
             uint256 shortPositionId = uint256(hashOrder(oppositeOrder));
@@ -277,26 +262,27 @@ contract PuttyV2 is EIP712, ERC721, ERC721TokenReceiver {
             ~~~ INTERACTIONS ~~~
         */
 
-        if (order.isCall) {
-            if (exercisedPositions[longPositionId]) {
-                // transfer strike to owner if call is exercised
-                ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike);
-            } else {
-                // transfer assets from putty to owner
-                _transferERC20sOut(order.erc20Assets);
-                _transferERC721sOut(order.erc721Assets);
-                _transferFloorsOut(order.floorTokens, positionFloorAssetTokenIds[longPositionId]);
-            }
-        } else {
-            if (exercisedPositions[longPositionId]) {
-                // transfer assets from putty to owner
-                _transferERC20sOut(order.erc20Assets);
-                _transferERC721sOut(order.erc721Assets);
-                _transferFloorsOut(order.floorTokens, positionFloorAssetTokenIds[uint256(orderHash)]);
-            } else {
-                // transfer strike to owner if put is expired
-                ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike);
-            }
+        // transfer strike to owner if put is expired or call is exercised
+        if (
+            (order.isCall && exercisedPositions[longPositionId]) ||
+            (!order.isCall && !exercisedPositions[longPositionId])
+        ) {
+            ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike);
+        }
+
+        // transfer assets from putty to owner if put is exercised or call is expired
+        if (
+            (order.isCall && !exercisedPositions[longPositionId]) ||
+            (!order.isCall && exercisedPositions[longPositionId])
+        ) {
+            _transferERC20sOut(order.erc20Assets);
+            _transferERC721sOut(order.erc721Assets);
+            _transferFloorsOut(
+                order.floorTokens,
+                // for call options the floor token ids are saved in the long position (in fillOrder),
+                // and for put options floor tokens ids saved in the short position (in exercise)
+                positionFloorAssetTokenIds[order.isCall ? longPositionId : uint256(orderHash)]
+            );
         }
     }
 
