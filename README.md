@@ -1,39 +1,44 @@
-# <h1 align="center"> Forge Template </h1>
+# Putty V2
 
-**Template repository for getting started quickly with Foundry projects**
+An order-book based american options market for NFTs and ERC20s.
+This project uses the foundry framework for testing/deployment.
 
-![Github Actions](https://github.com/foundry-rs/forge-template/workflows/CI/badge.svg)
+## Getting started
 
-## Getting Started
-
-Click "Use this template" on [GitHub](https://github.com/foundry-rs/forge-template) to create a new repository with this repo as the initial state.
-
-Or, if your repo already exists, run:
-```sh
-forge init
-forge build
+```
+forge install
 forge test
 ```
 
-## Writing your first test
+## Tests
 
-All you need is to `import forge-std/Test.sol` and then inherit it from your test contract. Forge-std's Test contract comes with a pre-instatiated [cheatcodes environment](https://book.getfoundry.sh/cheatcodes/), the `vm`. It also has support for [ds-test](https://book.getfoundry.sh/reference/ds-test.html)-style logs and assertions. Finally, it supports Hardhat's [console.log](https://github.com/brockelmore/forge-std/blob/master/src/console.sol). The logging functionalities require `-vvvv`.
+There is a full test-suite included in `./test/`. There is also a differential test suite included in `./test/differential/`. By default the differential tests are disabled. To run them follow the instructions in the README in `./test/differential/`.
 
-```solidity
-pragma solidity 0.8.10;
+## Flow
 
-import "forge-std/Test.sol";
+There are four types of orders that a user can create.
 
-contract ContractTest is Test {
-    function testExample() public {
-        vm.roll(100);
-        console.log(1);
-        emit log("hi");
-        assertTrue(true);
-    }
-}
-```
+1. long put
+2. short put
+3. long call
+4. short call
 
-## Development
+When an order is filled 2 option contracts are minted in the form of NFTs. One NFT represents the short position, and the other NFT represents the long position. All options are fully collateralised and physically settled.
 
-This project uses [Foundry](https://getfoundry.sh). See the [book](https://book.getfoundry.sh/getting-started/installation.html) for instructions on how to install and use Foundry.
+Here is an example flow for filling a long put option.
+
+- Alice creates and signs a long put option order off-chain for a 2 Bored Ape floors with a duration of 30 days, a strike of 124 WETH and a premium of 0.8 WETH
+- Bob takes Alice's order and fills it by sumbitting it to the Putty smart contract using `fillOrder()`
+- He sends 124 ETH to cover the strike which is converted to WETH. 0.8 WETH is transferred from Alice's wallet to Bob's wallet.
+- A long NFT is sent to Alice and a short NFT is sent to Bob which represents their position in the trade
+- 17 days pass and the floor price for Bored Apes has dropped to 54 ETH - (`2 * 54 = 108 ETH = 16 ETH profit`)
+- Alice decides to exercise her long put contract and lock in her 16 ETH profit
+  - She purchases BAYC #541 and BAYC #8765 from the open market for a combined total of 108 ETH
+  - She calls exercise() on Putty and sends her BAYC id's of [#541, #8765]
+  - BAYC #541 and BAYC #8765 are transferred from her wallet to Putty
+  - Her long option is marked as exercised (`exercisedPositions`)
+  - The 124 WETH strike is transferred to Alice
+  - Alice's long option is voided and burned
+- A few hours later, Bob sees that Alice has exercised her option
+- He decides to withdraw (`withdraw()`) - BAYC #541 and BAYC #8765 are sent from Putty to his wallet
+- His short option NFT is voided and burned

@@ -91,6 +91,10 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         weth = _weth;
     }
 
+    /*
+        ~~~ ADMIN FUNCTIONS ~~~
+    */
+
     function setBaseURI(string memory _baseURI) public payable onlyOwner {
         baseURI = _baseURI;
     }
@@ -101,6 +105,17 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         fee = _fee;
     }
+
+    /*
+        ~~~ MAIN LOGIC FUNCTIONS ~~~
+
+        Standard lifecycle:
+            [1] fillOrder()
+            [2] exercise()
+            [3] withdraw()
+
+            * it is also possible to cancel() an order before fillOrder()
+    */
 
     function fillOrder(
         Order memory order,
@@ -153,15 +168,6 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         /*
             ~~~ INTERACTIONS ~~~
         */
-
-        // filling the order
-        // short call - send eth for premium to maker
-        // short put - send eth for premium to maker
-        // long call - nothing
-        // long put - send eth for strike to contract and convert to weth
-
-        // exercising the order
-        // call - send eth for strike to contract and convert to weth
 
         // transfer premium to whoever is short from whomever is long
         if (order.isLong) {
@@ -347,8 +353,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             _transferERC721sOut(order.erc721Assets);
             _transferFloorsOut(
                 order.floorTokens,
-                // for call options the floor token ids are saved in the long position (in fillOrder),
-                // and for put options floor tokens ids saved in the short position (in exercise)
+                // for call options the floor token ids are saved in the long position in fillOrder(),
+                // and for put options floor tokens ids saved in the short position in exercise()
                 positionFloorAssetTokenIds[order.isCall ? longPositionId : uint256(orderHash)]
             );
         }
