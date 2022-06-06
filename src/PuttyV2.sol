@@ -7,6 +7,7 @@ import "openzeppelin/utils/Strings.sol";
 import "openzeppelin/access/Ownable.sol";
 import "solmate/utils/SafeTransferLib.sol";
 import "solmate/tokens/ERC721.sol";
+import "./lib/IWETH.sol";
 
 import "./PuttyV2Nft.sol";
 
