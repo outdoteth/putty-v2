@@ -70,6 +70,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             )
         );
 
+    address public immutable weth;
+
     string public baseURI;
     uint256 public fee;
 
@@ -78,9 +80,14 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     mapping(uint256 => uint256) public positionExpirations;
     mapping(uint256 => bool) public exercisedPositions;
 
-    constructor(string memory _baseURI, uint256 _fee) {
+    constructor(
+        string memory _baseURI,
+        uint256 _fee,
+        address _weth
+    ) {
         setBaseURI(_baseURI);
         setFee(_fee);
+        weth = _weth;
     }
 
     function setBaseURI(string memory _baseURI) public payable onlyOwner {
