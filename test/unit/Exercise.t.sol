@@ -162,7 +162,7 @@ contract TestExercise is Fixture {
         );
     }
 
-    function testItTransfersStrikeToExerciserForCall() public {
+    function testItTransfersStrikeToPuttyForCall() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
         bytes memory signature = signOrder(babePrivateKey, order);
@@ -280,5 +280,35 @@ contract TestExercise is Fixture {
         assertEq(bayc.ownerOf(floorTokenId), address(p), "Should have sent floor asset from exerciser to Putty");
         assertEq(bayc.ownerOf(erc721TokenId), address(p), "Should have sent bayc token from exerciser to Putty");
         assertEq(link.balanceOf(address(p)), erc20Amount, "Should have sent link tokens from exerciser to Putty");
+    }
+
+    function testItTransfersNativeETHToPuttyAndConvertsToWETHForCall() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature = signOrder(babePrivateKey, order);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // act
+        order.isLong = true;
+        p.exercise{value: order.strike}(order, floorAssetTokenIds);
+
+        // assert
+        assertEq(
+            weth.balanceOf(address(p)),
+            order.strike,
+            "Should have transferred strike from exerciser to contract and converted to WETH"
+        );
+    }
+
+    function testItCannotTransferWrongAmountOfNativeETHForCall() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature = signOrder(babePrivateKey, order);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // act
+        order.isLong = true;
+        vm.expectRevert("Incorrect ETH amount sent");
+        p.exercise{value: order.strike - 1}(order, floorAssetTokenIds);
     }
 }

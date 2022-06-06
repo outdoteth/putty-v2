@@ -106,7 +106,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         Order memory order,
         bytes calldata signature,
         uint256[] calldata floorAssetTokenIds
-    ) public returns (uint256 positionId) {
+    ) public payable returns (uint256 positionId) {
         /*
             ~~~ CHECKS ~~~
         */
@@ -164,9 +164,24 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // call - send eth for strike to contract and convert to weth
 
         // transfer premium to whoever is short from whomever is long
-        order.isLong
-            ? ERC20(order.baseAsset).safeTransferFrom(order.maker, msg.sender, order.premium)
-            : ERC20(order.baseAsset).safeTransferFrom(msg.sender, order.maker, order.premium);
+        if (order.isLong) {
+            ERC20(order.baseAsset).safeTransferFrom(order.maker, msg.sender, order.premium);
+        } else {
+            // handle the case where the user uses native ETH instead of WETH to pay the premium
+            if (weth == order.baseAsset && msg.value > 0) {
+                // check enough ETH was sent to cover the premium
+                require(msg.value == order.premium, "Incorrect ETH amount sent");
+
+                // convert ETH to WETH and send premium to maker
+                // converting to WETH instead of forwarding native ETH to the maker has two benefits;
+                // 1) active market makers will mostly be using WETH not native ETH
+                // 2) attack surface for re-entrancy is reduced
+                IWETH(weth).deposit{value: msg.value}();
+                IWETH(weth).transfer(order.maker, msg.value);
+            } else {
+                ERC20(order.baseAsset).safeTransferFrom(msg.sender, order.maker, order.premium);
+            }
+        }
 
         // filling short put
         // transfer strike from maker to contract
@@ -177,7 +192,18 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // filling long put
         // transfer strike from taker to contract
         if (order.isLong && !order.isCall) {
-            ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
+            // handle the case where the taker uses native ETH instead of WETH to deposit the strike
+            if (weth == order.baseAsset && msg.value > 0) {
+                // check enough ETH was sent to cover the strike
+                require(msg.value == order.strike, "Incorrect ETH amount sent");
+
+                // convert ETH to WETH
+                // we convert the strike ETH to WETH so that the logic in exercise() works
+                // - because exercise() assumes an ERC20 interface on the base asset.
+                IWETH(weth).deposit{value: msg.value}();
+            } else {
+                ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
+            }
         }
 
         // filling short call
@@ -196,7 +222,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
     }
 
-    function exercise(Order memory order, uint256[] calldata floorAssetTokenIds) public {
+    function exercise(Order memory order, uint256[] calldata floorAssetTokenIds) public payable {
         /*
             ~~~ CHECKS ~~~
         */
@@ -237,7 +263,18 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             // -- exercising a call option
 
             // transfer strike from exerciser to putty
-            ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
+            // handle the case where the taker uses native ETH instead of WETH to pay the strike
+            if (weth == order.baseAsset && msg.value > 0) {
+                // check enough ETH was sent to cover the strike
+                require(msg.value == order.strike, "Incorrect ETH amount sent");
+
+                // convert ETH to WETH
+                // we convert the strike ETH to WETH so that the logic in withdraw() works
+                // - because withdraw() assumes an ERC20 interface on the base asset.
+                IWETH(weth).deposit{value: msg.value}();
+            } else {
+                ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
+            }
 
             // transfer assets from putty to exerciser
             _transferERC20sOut(order.erc20Assets);

@@ -366,6 +366,80 @@ contract TestFillOrder is Fixture {
         p.fillOrder(order, signature, floorAssetTokenIds);
     }
 
+    function testItTransfersPremiumIfNativeETHIsUsedToFillShort() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = false;
+        bytes memory signature = signOrder(babePrivateKey, order);
+        deal(address(this), order.premium);
+
+        // act
+        uint256 takerBalanceBefore = address(this).balance;
+        uint256 makerBalanceBefore = weth.balanceOf(order.maker);
+        p.fillOrder{value: order.premium}(order, signature, floorAssetTokenIds);
+
+        // assert
+        assertEq(
+            weth.balanceOf(order.maker) - makerBalanceBefore,
+            order.premium,
+            "Should have transferred WETH to maker"
+        );
+
+        assertEq(takerBalanceBefore - address(this).balance, order.premium, "Should have transferred ETH to contract");
+    }
+
+    function testItCannotTransferIncorrectNativeETHForPremium() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = false;
+        bytes memory signature = signOrder(babePrivateKey, order);
+        deal(address(this), order.premium);
+
+        // act
+        vm.expectRevert("Incorrect ETH amount sent");
+        p.fillOrder{value: order.premium - 1}(order, signature, floorAssetTokenIds);
+    }
+
+    function testItTransfersStrikeIfNativeETHIsUsedToFillLongPut() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = true;
+        order.isCall = false;
+        bytes memory signature = signOrder(babePrivateKey, order);
+        deal(address(this), order.strike);
+
+        // act
+        uint256 takerBalanceBefore = address(this).balance;
+        uint256 contractBalanceBefore = weth.balanceOf(address(p));
+        p.fillOrder{value: order.strike}(order, signature, floorAssetTokenIds);
+
+        // assert
+        assertEq(
+            weth.balanceOf(address(p)) - contractBalanceBefore,
+            order.strike,
+            "Should have converted deposited WETH to ETH in contract"
+        );
+
+        assertEq(
+            takerBalanceBefore - address(this).balance,
+            order.strike,
+            "Should have transferred strike ETH to contract"
+        );
+    }
+
+    function testItCannotTransferIncorrectNativeETHForStrike() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = true;
+        order.isCall = false;
+        bytes memory signature = signOrder(babePrivateKey, order);
+        deal(address(this), order.strike);
+
+        // act
+        vm.expectRevert("Incorrect ETH amount sent");
+        p.fillOrder{value: order.strike - 1}(order, signature, floorAssetTokenIds);
+    }
+
     function testItFillsOrder(PuttyV2.Order memory order) public {
         // arrange
         order.isCall = false;
