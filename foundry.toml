@@ -1,7 +1,7 @@
 [default]
 solc_version = "0.8.13"
 fuzz_runs = 100
-optimizer_runs = 2000
+optimizer_runs = 100_000
 optimizer = true
 no_match_path = "test/differential/*"
 

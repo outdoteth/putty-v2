@@ -91,9 +91,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         weth = _weth;
     }
 
-    /*
-        ~~~ ADMIN FUNCTIONS ~~~
-    */
+    /* ~~~ ADMIN FUNCTIONS ~~~ */
 
     function setBaseURI(string memory _baseURI) public payable onlyOwner {
         baseURI = _baseURI;
@@ -117,14 +115,40 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             * it is also possible to cancel() an order before fillOrder()
     */
 
+    function batchFillOrder(
+        Order[] memory orders,
+        bytes[] calldata signatures,
+        uint256[][] memory floorAssetTokenIds
+    ) public returns (uint256[] memory positionIds) {
+        require(orders.length == signatures.length, "Length mismatch in input");
+        require(signatures.length == floorAssetTokenIds.length, "Length mismatch in input");
+
+        positionIds = new uint256[](orders.length);
+
+        for (uint256 i = 0; i < orders.length; i++) {
+            positionIds[i] = fillOrder(orders[i], signatures[i], floorAssetTokenIds[i]);
+        }
+    }
+
+    function acceptCounterOffer(
+        Order memory order,
+        bytes calldata signature,
+        Order memory originalOrder
+    ) public payable returns (uint256 positionId) {
+        // accept the counter offer
+        uint256[] memory floorAssetTokenIds = new uint256[](0);
+        positionId = fillOrder(order, signature, floorAssetTokenIds);
+
+        // cancel the original order
+        cancel(originalOrder);
+    }
+
     function fillOrder(
         Order memory order,
         bytes calldata signature,
-        uint256[] calldata floorAssetTokenIds
+        uint256[] memory floorAssetTokenIds
     ) public payable returns (uint256 positionId) {
-        /*
-            ~~~ CHECKS ~~~
-        */
+        /* ~~~ CHECKS ~~~ */
 
         bytes32 orderHash = hashOrder(order);
 
@@ -148,9 +172,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
             : require(floorAssetTokenIds.length == 0, "Invalid floor tokens length");
 
-        /*
-            ~~~ EFFECTS ~~~
-        */
+        /*  ~~~ EFFECTS ~~~ */
 
         // create long/short position for maker
         _mint(order.maker, uint256(orderHash));
@@ -159,15 +181,15 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         positionId = uint256(hashOppositeOrder(order));
         _mint(msg.sender, positionId);
 
-        // save floorAssetTokenIds
-        positionFloorAssetTokenIds[uint256(orderHash)] = floorAssetTokenIds;
+        // save floorAssetTokenIds if filling a long call order
+        if (order.isLong && order.isCall) {
+            positionFloorAssetTokenIds[uint256(orderHash)] = floorAssetTokenIds;
+        }
 
         // save the long position expiration
         positionExpirations[order.isLong ? uint256(orderHash) : positionId] = block.timestamp + order.duration;
 
-        /*
-            ~~~ INTERACTIONS ~~~
-        */
+        /* ~~~ INTERACTIONS ~~~ */
 
         // transfer premium to whoever is short from whomever is long
         if (order.isLong) {
@@ -189,14 +211,12 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             }
         }
 
-        // filling short put
-        // transfer strike from maker to contract
+        // filling short put: transfer strike from maker to contract
         if (!order.isLong && !order.isCall) {
             ERC20(order.baseAsset).safeTransferFrom(order.maker, address(this), order.strike);
         }
 
-        // filling long put
-        // transfer strike from taker to contract
+        // filling long put: transfer strike from taker to contract
         if (order.isLong && !order.isCall) {
             // handle the case where the taker uses native ETH instead of WETH to deposit the strike
             if (weth == order.baseAsset && msg.value > 0) {
@@ -212,15 +232,13 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             }
         }
 
-        // filling short call
-        // transfer assets from maker to contract
+        // filling short call: transfer assets from maker to contract
         if (!order.isLong && order.isCall) {
             _transferERC20sIn(order.erc20Assets, order.maker);
             _transferERC721sIn(order.erc721Assets, order.maker);
         }
 
-        // filling long call
-        // transfer assets from taker to contract
+        // filling long call: transfer assets from taker to contract
         if (order.isLong && order.isCall) {
             _transferERC20sIn(order.erc20Assets, msg.sender);
             _transferERC721sIn(order.erc721Assets, msg.sender);
@@ -229,9 +247,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     }
 
     function exercise(Order memory order, uint256[] calldata floorAssetTokenIds) public payable {
-        /*
-            ~~~ CHECKS ~~~
-        */
+        /* ~~~ CHECKS ~~~ */
 
         bytes32 orderHash = hashOrder(order);
 
@@ -249,9 +265,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
             : require(floorAssetTokenIds.length == 0, "Invalid floor tokenIds length");
 
-        /*
-            ~~~ EFFECTS ~~~
-        */
+        /* ~~~ EFFECTS ~~~ */
 
         // send the long position to 0xdead.
         // instead of doing a standard burn by sending to 0x000...000, sending
@@ -261,9 +275,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // mark the position as exercised
         exercisedPositions[uint256(orderHash)] = true;
 
-        /*
-            ~~~ INTERACTIONS ~~~
-        */
+        /* ~~~ INTERACTIONS ~~~ */
 
         if (order.isCall) {
             // -- exercising a call option
@@ -304,9 +316,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     }
 
     function withdraw(Order memory order) public {
-        /*
-            ~~~ CHECKS ~~~
-        */
+        /* ~~~ CHECKS ~~~ */
 
         // check order is short
         require(!order.isLong, "Must be short position");
@@ -322,18 +332,14 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // check long position has either been exercised or is expired
         require(block.timestamp > positionExpirations[longPositionId] || isExercised, "Must be exercised or expired");
 
-        /*
-            ~~~ EFFECTS ~~~
-        */
+        /* ~~~ EFFECTS ~~~ */
 
         // send the short position to 0xdead.
         // instead of doing a standard burn by sending to 0x000...000, sending
         // to 0xdead ensures that the same position id cannot be minted again.
         transferFrom(msg.sender, address(0xdead), uint256(orderHash));
 
-        /*
-            ~~~ INTERACTIONS ~~~
-        */
+        /* ~~~ INTERACTIONS ~~~ */
 
         // transfer strike to owner if put is expired or call is exercised
         if ((order.isCall && isExercised) || (!order.isCall && !isExercised)) {
