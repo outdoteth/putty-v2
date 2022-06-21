@@ -156,6 +156,217 @@
   {
     "inputs": [
       {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "maker",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isCall",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "baseAsset",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "strike",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "premium",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "duration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expiration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "nonce",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address[]",
+            "name": "whitelist",
+            "type": "address[]"
+          },
+          {
+            "internalType": "address[]",
+            "name": "floorTokens",
+            "type": "address[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenAmount",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct PuttyV2.ERC20Asset[]",
+            "name": "erc20Assets",
+            "type": "tuple[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct PuttyV2.ERC721Asset[]",
+            "name": "erc721Assets",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct PuttyV2.Order",
+        "name": "order",
+        "type": "tuple"
+      },
+      {
+        "internalType": "bytes",
+        "name": "signature",
+        "type": "bytes"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "maker",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isCall",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "baseAsset",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "strike",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "premium",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "duration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expiration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "nonce",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address[]",
+            "name": "whitelist",
+            "type": "address[]"
+          },
+          {
+            "internalType": "address[]",
+            "name": "floorTokens",
+            "type": "address[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenAmount",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct PuttyV2.ERC20Asset[]",
+            "name": "erc20Assets",
+            "type": "tuple[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct PuttyV2.ERC721Asset[]",
+            "name": "erc721Assets",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct PuttyV2.Order",
+        "name": "originalOrder",
+        "type": "tuple"
+      }
+    ],
+    "name": "acceptCounterOffer",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "spender",
         "type": "address"
@@ -201,6 +412,126 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "maker",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isCall",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "baseAsset",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "strike",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "premium",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "duration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expiration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "nonce",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address[]",
+            "name": "whitelist",
+            "type": "address[]"
+          },
+          {
+            "internalType": "address[]",
+            "name": "floorTokens",
+            "type": "address[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenAmount",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct PuttyV2.ERC20Asset[]",
+            "name": "erc20Assets",
+            "type": "tuple[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct PuttyV2.ERC721Asset[]",
+            "name": "erc721Assets",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct PuttyV2.Order[]",
+        "name": "orders",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "bytes[]",
+        "name": "signatures",
+        "type": "bytes[]"
+      },
+      {
+        "internalType": "uint256[][]",
+        "name": "floorAssetTokenIds",
+        "type": "uint256[][]"
+      }
+    ],
+    "name": "batchFillOrder",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "positionIds",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
