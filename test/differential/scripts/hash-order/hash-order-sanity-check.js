@@ -37,7 +37,7 @@ const main = async () => {
   console.log("type hash", id(encoder._types["Order"]));
   console.log("domain", hashedDomain);
   console.log("order hash", encoded);
-  console.log("final hash", hashOrder(order));
+  console.log("final hash", hashOrder(order, "0xf5a2fe45f4f1308502b1c136b9ef8af136141382"));
 };
 
 main();

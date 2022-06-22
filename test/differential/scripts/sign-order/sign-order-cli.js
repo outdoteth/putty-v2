@@ -3,7 +3,8 @@ const { signOrder } = require("./sign-order");
 
 const main = async () => {
   const encodedOrder = process.argv[2];
-  const privateKey = process.argv[3];
+  const verifyingContract = process.argv[3];
+  const privateKey = process.argv[4];
 
   const [order] = defaultAbiCoder.decode(
     [
@@ -12,7 +13,7 @@ const main = async () => {
     encodedOrder
   );
 
-  const signature = await signOrder(order, privateKey);
+  const signature = await signOrder(order, verifyingContract, privateKey);
 
   process.stdout.write(signature);
   process.exit();

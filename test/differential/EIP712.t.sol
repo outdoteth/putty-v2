@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "openzeppelin/utils/cryptography/ECDSA.sol";
+import "openzeppelin/utils/Strings.sol";
 
 import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
@@ -35,11 +36,12 @@ contract TestEIP712 is Fixture {
 
     function testRecoveredSignerMatchesEthersEIP712Implementation(PuttyV2.Order memory order) public {
         // arrange
-        string[] memory runJsInputs = new string[](4);
+        string[] memory runJsInputs = new string[](5);
         runJsInputs[0] = "node";
         runJsInputs[1] = "./test/differential/scripts/sign-order/sign-order-cli.js";
         runJsInputs[2] = toHexString(abi.encode(order));
-        runJsInputs[3] = toHexString(abi.encode(babePrivateKey));
+        runJsInputs[3] = Strings.toHexString(address(p));
+        runJsInputs[4] = toHexString(abi.encode(babePrivateKey));
 
         // act
         bytes memory ethersSignature = vm.ffi(runJsInputs);
@@ -72,10 +74,11 @@ contract TestEIP712 is Fixture {
 
     function testOrderHashMatchesEthersEIP712Implementation(PuttyV2.Order memory order) public {
         // arrange
-        string[] memory runJsInputs = new string[](3);
+        string[] memory runJsInputs = new string[](4);
         runJsInputs[0] = "node";
         runJsInputs[1] = "./test/differential/scripts/hash-order/hash-order-cli.js";
         runJsInputs[2] = toHexString(abi.encode(order));
+        runJsInputs[3] = Strings.toHexString(address(p));
 
         // act
         bytes memory ethersResult = vm.ffi(runJsInputs);
@@ -83,7 +86,7 @@ contract TestEIP712 is Fixture {
         bytes32 orderHash = p.hashOrder(order);
 
         // assert
-        assertEq(orderHash, ethersGeneratedHash, "Should have generated same hash");
+        assertEq(orderHash, ethersGeneratedHash, "Should have generated same hash as ethers implementation");
     }
 
     function toHexString(bytes memory input) public pure returns (string memory) {
