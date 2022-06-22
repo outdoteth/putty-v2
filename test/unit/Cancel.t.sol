@@ -9,6 +9,8 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestCancel is Fixture {
+    event CancelledOrder(bytes32 indexed orderHash, PuttyV2.Order order);
+
     receive() external payable {}
 
     function setUp() public {
@@ -40,5 +42,17 @@ contract TestCancel is Fixture {
 
         // assert
         assertEq(p.cancelledOrders(p.hashOrder(order)), true, "Should have marked order as cancelled");
+    }
+
+    function testItEmitsCancelledOrder() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+
+        // act
+        vm.startPrank(babe);
+        vm.expectEmit(true, false, false, true);
+        emit CancelledOrder(p.hashOrder(order), order);
+        p.cancel(order);
+        vm.stopPrank();
     }
 }

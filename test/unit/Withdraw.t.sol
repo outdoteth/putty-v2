@@ -9,6 +9,8 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestWithdraw is Fixture {
+    event WithdrawOrder(bytes32 indexed orderHash, PuttyV2.Order order);
+
     address[] internal floorTokens;
     PuttyV2.ERC20Asset[] internal erc20Assets;
     PuttyV2.ERC721Asset[] internal erc721Assets;
@@ -217,5 +219,19 @@ contract TestWithdraw is Fixture {
         assertEq(bayc.ownerOf(floorTokenId), address(this), "Should have sent floor asset from putty to withdrawer");
         assertEq(bayc.ownerOf(erc721TokenId), address(this), "Should have sent bayc token from putty to withdrawer");
         assertEq(link.balanceOf(address(this)), erc20Amount, "Should have sent link tokens from putty to withdrawer");
+    }
+
+    function testItEmitsWithdrawOrder() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature = signOrder(babePrivateKey, order);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+        skip(order.duration + 1);
+
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit WithdrawOrder(p.hashOrder(order), order);
+        vm.prank(babe);
+        p.withdraw(order);
     }
 }

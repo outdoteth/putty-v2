@@ -9,6 +9,8 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestFillOrder is Fixture {
+    event FilledOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, PuttyV2.Order order);
+
     address[] internal whitelist;
     address[] internal floorTokens;
     PuttyV2.ERC20Asset[] internal erc20Assets;
@@ -441,6 +443,17 @@ contract TestFillOrder is Fixture {
         // act
         vm.expectRevert("Incorrect ETH amount sent");
         p.fillOrder{value: order.strike - 1}(order, signature, floorAssetTokenIds);
+    }
+
+    function testItEmitsFilledOrder() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit FilledOrder(p.hashOrder(order), floorAssetTokenIds, order);
+        p.fillOrder(order, signature, floorAssetTokenIds);
     }
 
     function testItFillsOrder(PuttyV2.Order memory order) public {

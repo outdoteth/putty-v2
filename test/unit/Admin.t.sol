@@ -9,6 +9,9 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestAdmin is Fixture {
+    event NewBaseURI(string baseURI);
+    event NewFee(uint256 fee);
+
     function testItCannotSetBaseURIIfNotAdmin() public {
         // act
         vm.prank(babe);
@@ -52,5 +55,19 @@ contract TestAdmin is Fixture {
         // act
         vm.expectRevert("fee must be less than 3%");
         p.setFee(fee);
+    }
+
+    function testItEmitsNewBaseURIEventOnSetBaseURI() public {
+        // act
+        vm.expectEmit(false, false, false, true);
+        emit NewBaseURI("https://test.org/");
+        p.setBaseURI("https://test.org/");
+    }
+
+    function testItEmitsNewFeeOnSetFee() public {
+        // act
+        vm.expectEmit(false, false, false, true);
+        emit NewFee(299);
+        p.setFee(299);
     }
 }

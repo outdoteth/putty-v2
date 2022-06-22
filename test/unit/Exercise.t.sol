@@ -9,6 +9,8 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestExercise is Fixture {
+    event ExercisedOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, PuttyV2.Order order);
+
     address[] internal floorTokens;
     PuttyV2.ERC20Asset[] internal erc20Assets;
     PuttyV2.ERC721Asset[] internal erc721Assets;
@@ -309,5 +311,18 @@ contract TestExercise is Fixture {
         order.isLong = true;
         vm.expectRevert("Incorrect ETH amount sent");
         p.exercise{value: order.strike - 1}(order, floorAssetTokenIds);
+    }
+
+    function testItEmitsExercisedOrder() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature = signOrder(babePrivateKey, order);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // act
+        order.isLong = true;
+        vm.expectEmit(true, true, true, true);
+        emit ExercisedOrder(p.hashOrder(order), floorAssetTokenIds, order);
+        p.exercise(order, floorAssetTokenIds);
     }
 }

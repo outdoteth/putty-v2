@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.13;
+pragma solidity 0.8.13;
+
+import "./lib/IWETH.sol";
 
 import "openzeppelin/utils/cryptography/SignatureChecker.sol";
 import "openzeppelin/utils/cryptography/draft-EIP712.sol";
@@ -7,13 +9,12 @@ import "openzeppelin/utils/Strings.sol";
 import "openzeppelin/access/Ownable.sol";
 import "solmate/utils/SafeTransferLib.sol";
 import "solmate/tokens/ERC721.sol";
-import "./lib/IWETH.sol";
 
 import "./PuttyV2Nft.sol";
 
-import "forge-std/console.sol";
-
 contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Ownable {
+    /* ~~~ TYPES ~~~ */
+
     using SafeTransferLib for ERC20;
 
     struct ERC20Asset {
@@ -41,6 +42,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         ERC20Asset[] erc20Assets;
         ERC721Asset[] erc721Assets;
     }
+
+    /* ~~~ STATE VARIABLES ~~~ */
 
     bytes32 public constant ERC721ASSET_TYPE_HASH =
         keccak256(abi.encodePacked("ERC721Asset(address token,uint256 tokenId)"));
@@ -81,6 +84,15 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     mapping(uint256 => bool) public exercisedPositions;
     mapping(uint256 => uint256[]) public positionFloorAssetTokenIds;
 
+    /* ~~~ EVENTS ~~~ */
+
+    event NewBaseURI(string baseURI);
+    event NewFee(uint256 fee);
+    event FilledOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, Order order);
+    event ExercisedOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, Order order);
+    event WithdrawOrder(bytes32 indexed orderHash, Order order);
+    event CancelledOrder(bytes32 indexed orderHash, Order order);
+
     constructor(
         string memory _baseURI,
         uint256 _fee,
@@ -95,6 +107,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     function setBaseURI(string memory _baseURI) public payable onlyOwner {
         baseURI = _baseURI;
+
+        emit NewBaseURI(_baseURI);
     }
 
     // _fee = 100% = 1000
@@ -102,6 +116,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         require(_fee < 300, "fee must be less than 3%");
 
         fee = _fee;
+
+        emit NewFee(_fee);
     }
 
     /*
@@ -150,7 +166,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         _mint(order.maker, uint256(orderHash));
 
         // create opposite long/short position for taker
-        positionId = uint256(hashOppositeOrder(order));
+        bytes32 oppositeOrderHash = hashOppositeOrder(order);
+        positionId = uint256(oppositeOrderHash);
         _mint(msg.sender, positionId);
 
         // save floorAssetTokenIds if filling a long call order
@@ -160,6 +177,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         // save the long position expiration
         positionExpirations[order.isLong ? uint256(orderHash) : positionId] = block.timestamp + order.duration;
+
+        emit FilledOrder(orderHash, floorAssetTokenIds, order);
 
         /* ~~~ INTERACTIONS ~~~ */
 
@@ -247,6 +266,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // mark the position as exercised
         exercisedPositions[uint256(orderHash)] = true;
 
+        emit ExercisedOrder(orderHash, floorAssetTokenIds, order);
+
         /* ~~~ INTERACTIONS ~~~ */
 
         if (order.isCall) {
@@ -311,6 +332,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // to 0xdead ensures that the same position id cannot be minted again.
         transferFrom(msg.sender, address(0xdead), uint256(orderHash));
 
+        emit WithdrawOrder(orderHash, order);
+
         /* ~~~ INTERACTIONS ~~~ */
 
         // transfer strike to owner if put is expired or call is exercised
@@ -345,6 +368,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         // mark the order as cancelled
         cancelledOrders[orderHash] = true;
+
+        emit CancelledOrder(orderHash, order);
     }
 
     /* ~~~ PERIPHERY LOGIC FUNCTIONS ~~~ */
