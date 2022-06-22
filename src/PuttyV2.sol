@@ -77,9 +77,9 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     uint256 public fee;
 
     mapping(bytes32 => bool) public cancelledOrders;
-    mapping(uint256 => uint256[]) public positionFloorAssetTokenIds;
     mapping(uint256 => uint256) public positionExpirations;
     mapping(uint256 => bool) public exercisedPositions;
+    mapping(uint256 => uint256[]) public positionFloorAssetTokenIds;
 
     constructor(
         string memory _baseURI,
@@ -114,34 +114,6 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
             * it is also possible to cancel() an order before fillOrder()
     */
-
-    function batchFillOrder(
-        Order[] memory orders,
-        bytes[] calldata signatures,
-        uint256[][] memory floorAssetTokenIds
-    ) public returns (uint256[] memory positionIds) {
-        require(orders.length == signatures.length, "Length mismatch in input");
-        require(signatures.length == floorAssetTokenIds.length, "Length mismatch in input");
-
-        positionIds = new uint256[](orders.length);
-
-        for (uint256 i = 0; i < orders.length; i++) {
-            positionIds[i] = fillOrder(orders[i], signatures[i], floorAssetTokenIds[i]);
-        }
-    }
-
-    function acceptCounterOffer(
-        Order memory order,
-        bytes calldata signature,
-        Order memory originalOrder
-    ) public payable returns (uint256 positionId) {
-        // accept the counter offer
-        uint256[] memory floorAssetTokenIds = new uint256[](0);
-        positionId = fillOrder(order, signature, floorAssetTokenIds);
-
-        // cancel the original order
-        cancel(originalOrder);
-    }
 
     function fillOrder(
         Order memory order,
@@ -374,6 +346,38 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // mark the order as cancelled
         cancelledOrders[orderHash] = true;
     }
+
+    /* ~~~ PERIPHERY LOGIC FUNCTIONS ~~~ */
+
+    function batchFillOrder(
+        Order[] memory orders,
+        bytes[] calldata signatures,
+        uint256[][] memory floorAssetTokenIds
+    ) public returns (uint256[] memory positionIds) {
+        require(orders.length == signatures.length, "Length mismatch in input");
+        require(signatures.length == floorAssetTokenIds.length, "Length mismatch in input");
+
+        positionIds = new uint256[](orders.length);
+
+        for (uint256 i = 0; i < orders.length; i++) {
+            positionIds[i] = fillOrder(orders[i], signatures[i], floorAssetTokenIds[i]);
+        }
+    }
+
+    function acceptCounterOffer(
+        Order memory order,
+        bytes calldata signature,
+        Order memory originalOrder
+    ) public payable returns (uint256 positionId) {
+        // accept the counter offer
+        uint256[] memory floorAssetTokenIds = new uint256[](0);
+        positionId = fillOrder(order, signature, floorAssetTokenIds);
+
+        // cancel the original order
+        cancel(originalOrder);
+    }
+
+    /* ~~~ HELPER FUNCTIONS ~~~ */
 
     function _transferERC20sIn(ERC20Asset[] memory assets, address from) internal {
         for (uint256 i = 0; i < assets.length; i++) {

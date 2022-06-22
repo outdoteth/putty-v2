@@ -9,9 +9,9 @@ By default, these tests are disabled. To run them:
 forge test --no-match-path None --match-path test/differential/*.sol --ffi
 ```
 
-Warning: It can take longer than 5 minutes to fully run through the whole differential test suite on a M1 mac. This is due to the fact that ffi testing is quite slow when combined with fuzz runs (default fuzz-runs is set to 1000). During this process the output to the terminal will be blank until it finishes. Not to worry, the tests are still running!
+Warning: It can take longer than 5 minutes to fully run through the whole differential test suite on a M1 mac. This is due to the fact that ffi testing is quite slow when combined with fuzz runs (default fuzz-runs is set to 500). During this process the output to the terminal will be blank until it finishes. Not to worry, the tests are still running!
 
-There are also "sanity check" files in the `./scripts` that just run some example input in the javascript implementaiton. To run them:
+There are also "sanity check" files in the `./scripts` that just run some example input in the ethers javascript implementation. To run them:
 
 ```
 $ node ./test/differential/scripts/sign-order/sign-order-sanity-check.js
