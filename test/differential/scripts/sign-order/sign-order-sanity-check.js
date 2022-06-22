@@ -30,7 +30,9 @@ const main = async () => {
   const privateKey = "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
   const signer = new Wallet(privateKey);
 
-  const signature = await signOrder(order, privateKey);
+  const verifyingContract = "0x0000000000000000000000000000000000000b0b";
+  domain.verifyingContract = verifyingContract;
+  const signature = await signOrder(order, verifyingContract, privateKey);
   const recoveredAddress = verifyTypedData(domain, types, order, signature);
 
   console.log("signing address: ", signer.address);

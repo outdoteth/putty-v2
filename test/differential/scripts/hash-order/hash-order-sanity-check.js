@@ -29,11 +29,13 @@ const main = async () => {
     erc721Assets: [{ token: babe, tokenId: 6 }],
   };
 
+  const verifyingContract = "0x0000000000000000000000000000000000000b0b";
+  domain.verifyingContract = verifyingContract;
   const hashedDomain = _TypedDataEncoder.hashDomain(domain);
   const encoded = _TypedDataEncoder.encode(domain, types, order);
   const encoder = _TypedDataEncoder.from(types);
 
-  console.log("encoding", encoder.encode(order));
+  console.log("order encoding", encoder.encode(order));
   console.log("type hash", id(encoder._types["Order"]));
   console.log("domain", hashedDomain);
   console.log("order hash", encoded);

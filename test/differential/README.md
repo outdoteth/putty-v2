@@ -14,6 +14,6 @@ Warning: It can take longer than 5 minutes to fully run through the whole differ
 There are also "sanity check" files in the `./scripts` that just run some example input in the javascript implementaiton. To run them:
 
 ```
-$ node ./sign-order-sanity-check.js
-$ node ./hash-order-sanity-check.js
+$ node ./test/differential/scripts/sign-order/sign-order-sanity-check.js
+$ node ./test/differential/scripts/hash-order/hash-order-sanity-check.js
 ```
