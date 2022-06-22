@@ -9,12 +9,6 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestCancel is Fixture {
-    address[] internal whitelist;
-    address[] internal floorTokens;
-    PuttyV2.ERC20Asset[] internal erc20Assets;
-    PuttyV2.ERC721Asset[] internal erc721Assets;
-    uint256[] internal floorAssetTokenIds;
-
     receive() external payable {}
 
     function setUp() public {

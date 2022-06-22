@@ -9,7 +9,6 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestExercise is Fixture {
-    address[] internal whitelist;
     address[] internal floorTokens;
     PuttyV2.ERC20Asset[] internal erc20Assets;
     PuttyV2.ERC721Asset[] internal erc721Assets;
@@ -96,8 +95,8 @@ contract TestExercise is Fixture {
         bytes memory signature = signOrder(babePrivateKey, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
 
-        floorAssetTokenIds.push(32);
-        floorAssetTokenIds.push(64);
+        floorAssetTokenIds.push(1137);
+        floorAssetTokenIds.push(99);
 
         // act
         order.isLong = true;
@@ -205,10 +204,10 @@ contract TestExercise is Fixture {
         bytes memory signature = signOrder(babePrivateKey, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
 
-        floorAssetTokenIds.pop();
+        uint256 wethBalanceBefore = weth.balanceOf(babe);
 
         // act
-        uint256 wethBalanceBefore = weth.balanceOf(babe);
+        floorAssetTokenIds = new uint256[](0);
         vm.prank(babe);
         p.exercise(order, floorAssetTokenIds);
 
@@ -230,9 +229,9 @@ contract TestExercise is Fixture {
         order.isCall = false;
         bytes memory signature = signOrder(babePrivateKey, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
+        uint256 balanceBefore = weth.balanceOf(address(this));
 
         // act
-        uint256 balanceBefore = weth.balanceOf(address(this));
         order.isLong = true;
         p.exercise(order, floorAssetTokenIds);
 

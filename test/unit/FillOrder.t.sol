@@ -18,17 +18,13 @@ contract TestFillOrder is Fixture {
     receive() external payable {}
 
     function setUp() public {
-        PuttyV2.Order memory order = defaultOrder();
+        deal(address(weth), address(this), 0xffffffff);
+        deal(address(weth), babe, 0xffffffff);
 
-        vm.deal(address(this), order.premium + order.strike);
-        weth.deposit{value: order.premium + order.strike}();
-        weth.approve(address(p), order.premium + order.strike);
+        weth.approve(address(p), type(uint256).max);
 
-        vm.startPrank(babe);
-        vm.deal(babe, order.premium + order.strike);
-        weth.deposit{value: order.premium + order.strike}();
-        weth.approve(address(p), order.premium + order.strike);
-        vm.stopPrank();
+        vm.prank(babe);
+        weth.approve(address(p), type(uint256).max);
     }
 
     function testItCannotUseInvalidSignature() public {
@@ -55,10 +51,9 @@ contract TestFillOrder is Fixture {
 
     function testItCannotFillOrderIfNotWhitelisted() public {
         // arrange
-        whitelist.push(bob);
         PuttyV2.Order memory order = defaultOrder();
+        whitelist.push(bob);
         order.whitelist = whitelist;
-
         bytes memory signature = signOrder(babePrivateKey, order);
 
         // act
@@ -73,9 +68,8 @@ contract TestFillOrder is Fixture {
         // act
         // long put option order
         PuttyV2.Order memory longPutOrder = defaultOrder();
-        longPutOrder.isCall = false;
         longPutOrder.isLong = true;
-
+        longPutOrder.isCall = false;
         bytes memory longPutOrderSignature = signOrder(babePrivateKey, longPutOrder);
 
         vm.expectRevert("Invalid floor tokens length");
@@ -83,8 +77,8 @@ contract TestFillOrder is Fixture {
 
         // short put option order
         PuttyV2.Order memory shortPutOrder = longPutOrder;
-        shortPutOrder.isCall = false;
         shortPutOrder.isLong = false;
+        shortPutOrder.isCall = false;
         bytes memory shortPutOrderSignature = signOrder(babePrivateKey, shortPutOrder);
 
         vm.expectRevert("Invalid floor tokens length");
@@ -92,8 +86,8 @@ contract TestFillOrder is Fixture {
 
         // short call option order
         PuttyV2.Order memory shortCallOrder = longPutOrder;
-        shortCallOrder.isCall = true;
         shortCallOrder.isLong = false;
+        shortCallOrder.isCall = true;
         bytes memory shortCallOrderSignature = signOrder(babePrivateKey, shortCallOrder);
 
         vm.expectRevert("Invalid floor tokens length");
@@ -106,12 +100,12 @@ contract TestFillOrder is Fixture {
         order.isLong = true;
         order.isCall = true;
 
-        floorAssetTokenIds.push(0x1337);
-        floorAssetTokenIds.push(0x1337);
         floorTokens.push(bob);
         order.floorTokens = floorTokens;
-
         bytes memory signature = signOrder(babePrivateKey, order);
+
+        floorAssetTokenIds.push(0x1337);
+        floorAssetTokenIds.push(0x1337);
 
         // act
         vm.expectRevert("Wrong amount of floor tokenIds");
@@ -156,14 +150,14 @@ contract TestFillOrder is Fixture {
 
         order.floorTokens = floorTokens;
 
+        bytes memory signature = signOrder(babePrivateKey, order);
+        bytes32 orderHash = p.hashOrder(order);
+
         bayc.mint(address(this), 1);
         bayc.mint(address(this), 2);
         bayc.setApprovalForAll(address(p), true);
         floorAssetTokenIds.push(1);
         floorAssetTokenIds.push(2);
-
-        bytes memory signature = signOrder(babePrivateKey, order);
-        bytes32 orderHash = p.hashOrder(order);
 
         // act
         p.fillOrder(order, signature, floorAssetTokenIds);
@@ -172,13 +166,13 @@ contract TestFillOrder is Fixture {
         assertEq(
             p.positionFloorAssetTokenIds(uint256(orderHash), 0),
             floorAssetTokenIds[0],
-            "Should have saved floor asset token ids"
+            "Should have saved first floor asset token id"
         );
 
         assertEq(
             p.positionFloorAssetTokenIds(uint256(orderHash), 1),
             floorAssetTokenIds[1],
-            "Should have saved floor asset token ids"
+            "Should have saved second floor asset token id"
         );
     }
 
@@ -205,9 +199,10 @@ contract TestFillOrder is Fixture {
         order.isLong = false;
         bytes memory signature = signOrder(babePrivateKey, order);
 
-        // act
         uint256 takerBalanceBefore = weth.balanceOf(address(this));
         uint256 makerBalanceBefore = weth.balanceOf(order.maker);
+
+        // act
         p.fillOrder(order, signature, floorAssetTokenIds);
 
         // assert
@@ -230,9 +225,10 @@ contract TestFillOrder is Fixture {
         order.isLong = true;
         bytes memory signature = signOrder(babePrivateKey, order);
 
-        // act
         uint256 takerBalanceBefore = weth.balanceOf(address(this));
         uint256 makerBalanceBefore = weth.balanceOf(order.maker);
+
+        // act
         p.fillOrder(order, signature, floorAssetTokenIds);
 
         // assert
@@ -256,8 +252,9 @@ contract TestFillOrder is Fixture {
         order.isCall = false;
         bytes memory signature = signOrder(babePrivateKey, order);
 
-        // act
         uint256 makerBalanceBefore = weth.balanceOf(order.maker);
+
+        // act
         p.fillOrder(order, signature, floorAssetTokenIds);
 
         //  assert
@@ -301,14 +298,14 @@ contract TestFillOrder is Fixture {
         order.erc20Assets = erc20Assets;
         order.erc721Assets = erc721Assets;
 
+        bytes memory signature = signOrder(babePrivateKey, order);
+
         vm.startPrank(babe);
         link.mint(babe, tokenAmount);
         link.approve(address(p), tokenAmount);
         bayc.mint(babe, tokenId);
         bayc.approve(address(p), tokenId);
         vm.stopPrank();
-
-        bytes memory signature = signOrder(babePrivateKey, order);
 
         // act
         p.fillOrder(order, signature, floorAssetTokenIds);
@@ -331,11 +328,12 @@ contract TestFillOrder is Fixture {
         erc20Assets.push(PuttyV2.ERC20Asset({token: address(link), tokenAmount: tokenAmount}));
         erc721Assets.push(PuttyV2.ERC721Asset({token: address(bayc), tokenId: tokenId}));
         floorTokens.push(address(bayc));
-        floorAssetTokenIds.push(floorTokenId);
 
         order.erc20Assets = erc20Assets;
         order.erc721Assets = erc721Assets;
         order.floorTokens = floorTokens;
+
+        bytes memory signature = signOrder(babePrivateKey, order);
 
         link.mint(address(this), tokenAmount);
         link.approve(address(p), tokenAmount);
@@ -344,9 +342,8 @@ contract TestFillOrder is Fixture {
         bayc.mint(address(this), floorTokenId);
         bayc.approve(address(p), floorTokenId);
 
-        bytes memory signature = signOrder(babePrivateKey, order);
-
         // act
+        floorAssetTokenIds.push(floorTokenId);
         p.fillOrder(order, signature, floorAssetTokenIds);
 
         // assert
@@ -371,21 +368,26 @@ contract TestFillOrder is Fixture {
         PuttyV2.Order memory order = defaultOrder();
         order.isLong = false;
         bytes memory signature = signOrder(babePrivateKey, order);
-        deal(address(this), order.premium);
 
-        // act
+        deal(address(this), order.premium);
         uint256 takerBalanceBefore = address(this).balance;
         uint256 makerBalanceBefore = weth.balanceOf(order.maker);
+
+        // act
         p.fillOrder{value: order.premium}(order, signature, floorAssetTokenIds);
 
         // assert
+        assertEq(
+            takerBalanceBefore - address(this).balance,
+            order.premium,
+            "Should have transferred ETH from taker to contract"
+        );
+
         assertEq(
             weth.balanceOf(order.maker) - makerBalanceBefore,
             order.premium,
             "Should have transferred WETH to maker"
         );
-
-        assertEq(takerBalanceBefore - address(this).balance, order.premium, "Should have transferred ETH to contract");
     }
 
     function testItCannotTransferIncorrectNativeETHForPremium() public {
@@ -406,11 +408,12 @@ contract TestFillOrder is Fixture {
         order.isLong = true;
         order.isCall = false;
         bytes memory signature = signOrder(babePrivateKey, order);
-        deal(address(this), order.strike);
 
-        // act
+        deal(address(this), order.strike);
         uint256 takerBalanceBefore = address(this).balance;
         uint256 contractBalanceBefore = weth.balanceOf(address(p));
+
+        // act
         p.fillOrder{value: order.strike}(order, signature, floorAssetTokenIds);
 
         // assert
@@ -423,7 +426,7 @@ contract TestFillOrder is Fixture {
         assertEq(
             takerBalanceBefore - address(this).balance,
             order.strike,
-            "Should have transferred strike ETH to contract"
+            "Should have transferred strike ETH from taker to contract"
         );
     }
 
@@ -452,6 +455,11 @@ contract TestFillOrder is Fixture {
         order.strike = bound(order.strike, 0, type(uint256).max - order.premium);
         order.expiration = block.timestamp + 1 days;
 
+        whitelist.push(address(this));
+        order.whitelist = whitelist;
+        bytes memory signature = signOrder(babePrivateKey, order);
+        bytes32 orderHash = p.hashOrder(order);
+
         deal(address(weth), address(this), order.premium);
         weth.approve(address(p), order.premium);
 
@@ -460,17 +468,13 @@ contract TestFillOrder is Fixture {
         weth.approve(address(p), order.strike);
         vm.stopPrank();
 
-        whitelist.push(address(this));
-        order.whitelist = whitelist;
-        bytes memory signature = signOrder(babePrivateKey, order);
-        bytes32 orderHash = p.hashOrder(order);
-
         // act
-        p.fillOrder(order, signature, floorAssetTokenIds);
+        uint256 positionId = p.fillOrder(order, signature, floorAssetTokenIds);
 
         // assert
         assertEq(weth.balanceOf(address(p)), order.strike);
         assertEq(weth.balanceOf(order.maker), order.premium);
         assertEq(p.ownerOf(uint256(orderHash)), order.maker);
+        assertEq(p.ownerOf(positionId), address(this));
     }
 }

@@ -9,7 +9,6 @@ import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
 
 contract TestWithdraw is Fixture {
-    address[] internal whitelist;
     address[] internal floorTokens;
     PuttyV2.ERC20Asset[] internal erc20Assets;
     PuttyV2.ERC721Asset[] internal erc721Assets;
@@ -95,8 +94,9 @@ contract TestWithdraw is Fixture {
         p.fillOrder(order, signature, floorAssetTokenIds);
         skip(order.duration + 1);
 
-        // act
         uint256 balanceBefore = weth.balanceOf(babe);
+
+        // act
         vm.prank(babe);
         p.withdraw(order);
 
@@ -116,12 +116,13 @@ contract TestWithdraw is Fixture {
         bytes memory signature = signOrder(babePrivateKey, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
 
-        // act
         PuttyV2.Order memory longOrder = abi.decode(abi.encode(order), (PuttyV2.Order)); // decode/encode to get a copy instead of reference
         longOrder.isLong = true;
         p.exercise(longOrder, floorAssetTokenIds);
 
         uint256 balanceBefore = weth.balanceOf(babe);
+
+        // act
         vm.prank(babe);
         p.withdraw(order);
 
@@ -170,9 +171,9 @@ contract TestWithdraw is Fixture {
         p.withdraw(order);
 
         // assert
-        assertEq(bayc.ownerOf(floorTokenId), babe, "Should have sent floor asset from exerciser to Putty");
-        assertEq(bayc.ownerOf(erc721TokenId), babe, "Should have sent bayc token from exerciser to Putty");
-        assertEq(link.balanceOf(babe), erc20Amount, "Should have sent link tokens from exerciser to Putty");
+        assertEq(bayc.ownerOf(floorTokenId), babe, "Should have sent floor asset to withdrawer from Putty");
+        assertEq(bayc.ownerOf(erc721TokenId), babe, "Should have sent bayc token to withdrawer from Putty");
+        assertEq(link.balanceOf(babe), erc20Amount, "Should have sent link tokens to withdrawer from Putty");
     }
 
     function testItWithdrawsAssetsIfCallExpired() public {
