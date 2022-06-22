@@ -3,30 +3,38 @@
 An order-book based american options market for NFTs and ERC20s.
 This project uses the foundry framework for testing/deployment.
 
-## Getting started
+## Links
 
-```
-forge install
-forge test
-```
+- Rinkeby demo site: [rinkeby.putty.finance](https://rinkeby.putty.finance)
+- Rinkeby etherscan: https://rinkeby.etherscan.io/address/0x1af0defa683e36dfe543dcf196bc1eaddbaddc36
+- Twitter: [@puttyfi](https://twitter.com/puttyfi)
+- Discord: https://discord.gg/rxppJYj4Jp
+
+## Contact
+
+Feel free to contact if you have questions. We are friendly :)
+
+**out.eth (engineer)** - online from 08:00 BST-23:30 BST
+
+- twitter: [@outdoteth](https://twitter.com/outdoteth)
+- telegram: [@outdoteth](https://t.me/outdoteth)
+- discord: out.eth#2001
+
+Will usually answer within 45 mins unless I'm eating or smth. heh.
 
 ## Tests
 
 There is a full test-suite included in `./test/`. There is also a differential test suite included in `./test/differential/`. By default the differential tests are disabled. To run them follow the instructions in the README in `./test/differential/`.
 
-## Overview
+To run the tests:
 
-At a high level, there are 4 main entry points:
+1. Install `foundry`, refer to [foundry](https://github.com/foundry-rs/foundry)
+2. Install `nodejs`, refer to [nodejs](https://nodejs.org/en/)
 
-- `fillOrder(Order memory order, bytes calldata signature, uint256[] memory floorAssetTokenIds)`
-- `exercise(Order memory order, uint256[] calldata floorAssetTokenIds)`
-- `withdraw(Order memory order)`
-- `cancel(Order memory order)`
-
-All orders are stored off chain until they are settled on chain through `fillOrder`.
-For an example of the lifecycle of these entrypoints and how they behave, see the "flow" below.
-
-There exists much more rigorous specification files in `./specifications` explaining how the system must generally behave and the invariants that must hold.
+```
+yarn
+forge test --gas-report
+```
 
 ## Flow
 
@@ -57,14 +65,78 @@ Here is an example flow for filling a long put option.
 - He decides to withdraw (`withdraw()`) - BAYC #541 and BAYC #8765 are sent from Putty to his wallet
 - His short option NFT is voided and burned
 
-## Contact
+At a high level, there are 4 main entry points:
 
-Feel free to contact if you have questions. We are friendly :)).
+- `fillOrder(Order memory order, bytes calldata signature, uint256[] memory floorAssetTokenIds)`
+- `exercise(Order memory order, uint256[] calldata floorAssetTokenIds)`
+- `withdraw(Order memory order)`
+- `cancel(Order memory order)`
 
-out.eth - online from 08:00 UTC -> 23:00 UTC
+All orders are stored off chain until they are settled on chain through `fillOrder`.
+There exists much more rigorous specification files in `./spec` with diagrams included.
 
-- twitter: @outdoteth
-- telegram: @outdoteth
-- discord: out.eth#2001
+## Libraries
 
-Will usually answer within 45 mins unless I'm eating or smth. heh.
+- [openzeppelin/utils/cryptography/SignatureChecker.sol](./lib/openzeppelin-contracts/contracts/utils/cryptography/SignatureChecker.sol)
+
+- [openzeppelin/utils/cryptography/draft-EIP712.sol](./lib/openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol)
+
+- [openzeppelin/utils/Strings.sol](./lib/openzeppelin-contracts/contracts/utils/Strings.sol)
+
+- [openzeppelin/utils/access/Ownable.sol](./lib/openzeppelin-contracts/utils/access/Ownable.sol)
+
+- [solmate/utils/SafeTransferLib.sol](./lib/solmate/src/utils/SafeTransferLib.sol")
+
+- [solmate/tokens/ERC721.sol](./lib/solmate/src/tokens/ERC721.sol")
+
+## Optimisations
+
+**There are various optimizations that may make the contracts harder to reason about. These are done to reduce gas costs but at the expense of code readability. Here are some helpful explanations of those optimizations.**
+
+### Removing balanceOf
+
+When an order is filled, Putty creates NFTs to represent both the long and short position.
+All balanceOf modifications have been removed from the Putty NFTs.
+Given our use-case, it is a reasonable tradeoff.
+The `balanceOf` for each user is set to be defaulted to `type(uint256).max` instead of `0`.
+
+```solidity
+// set balanceOf to max for all users
+function balanceOf(address owner) public pure override returns (uint256) {
+  require(owner != address(0), "ZERO_ADDRESS");
+  return type(uint256).max;
+}
+
+```
+
+This was done to save gas since not tracking the `balanceOf` avoids a single storage modification or initialisation on each transfer/mint/burn.
+
+## Notes
+
+### Floor options
+
+There is one area of the code that is perhaps not so intuitive. That is, `floorTokenIds` and `positionFloorAssetTokenIds`. This is a way for us to support floor NFT options.
+
+The idea is that Alice can create a put option with 3 `floorTokens (address[])` and then when Bob wants to exercise he can send _any_ 3 tokens from the collections listed in `floorTokens`. Because he can use _any_ token from the collection, it essentially replicates a floor option; when exercising, he will always choose the lowest value tokens - floors.
+
+Similarly Alice can create an off-chain order for a long call option with 5 `floorTokens (address[])`. Bob can fill this order (`fillOrder`) and send any 5 tokens from the collections listed in `floorTokens` as collateral.
+
+When an exercise or fillOrder happens, we save the floorTokenIds that Bob used in `positionFloorAssetTokenIds`. This is so that we can reference them later for the following situations;
+
+a) Bob exercised his put option. Alice then can withdraw the floor tokens that Bob used.
+
+b) Alice exercised her long call option. The floor tokens are sent to Alice.
+
+c) Alice let her long call option expire. The floor tokens are sent back to Bob.
+
+## Areas of concern for wardens
+
+There are a few places in the code where we have a lower confidence that things are correct. These may potentially serve as low-hanging fruit:
+
+- Incorrect EIP-712 implementation
+
+- External contract calls via token transfers leading to re-entrancy
+
+- Incorrect handling of native ETH to WETH in `fillOrder` and `exercise`
+
+- Timestamp manipulation
