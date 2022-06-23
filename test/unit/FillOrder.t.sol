@@ -63,6 +63,28 @@ contract TestFillOrder is Fixture {
         p.fillOrder(order, signature, floorAssetTokenIds);
     }
 
+    function testItCannotFillOrderIfDurationIsTooLong() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.duration = 10_001 days;
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        vm.expectRevert("Duration too long");
+        p.fillOrder(order, signature, floorAssetTokenIds);
+    }
+
+    function testItCannotFillOrderIfBaseAssetIsNotContract() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.baseAsset = address(0xdeadbeef);
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        vm.expectRevert("baseAsset is not contract");
+        p.fillOrder(order, signature, floorAssetTokenIds);
+    }
+
     function testItCannotFillOrderWithFloorAssetTokenIdsIfOrderIsNotLongCall() public {
         // arrange
         floorAssetTokenIds.push(0x1337);
@@ -141,7 +163,7 @@ contract TestFillOrder is Fixture {
         assertEq(p.ownerOf(uint256(oppositeOrderHash)), address(this), "Should have minted opposite position to taker");
     }
 
-    function testItSavesFloorAssetTokenIds() public {
+    function testItSavesFloorAssetTokenIdsIfLongCall() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
         order.isLong = true;
@@ -265,6 +287,12 @@ contract TestFillOrder is Fixture {
             order.strike - order.premium,
             "Should have transferred strike from maker when filling short put"
         );
+
+        assertEq(
+            weth.balanceOf(address(p)),
+            order.strike,
+            "Should have transferred strike to putty when filling short put"
+        );
     }
 
     function testItTransfersStrikeFromTakerToPuttyForLongPut() public {
@@ -283,6 +311,12 @@ contract TestFillOrder is Fixture {
             takerBalanceBefore - weth.balanceOf(address(this)),
             order.strike - order.premium,
             "Should have transferred strike from taker to Putty when filling short put"
+        );
+
+        assertEq(
+            weth.balanceOf(address(p)),
+            order.strike,
+            "Should have transferred strike to putty when filling long put"
         );
     }
 
@@ -454,6 +488,19 @@ contract TestFillOrder is Fixture {
         vm.expectEmit(true, true, true, true);
         emit FilledOrder(p.hashOrder(order), floorAssetTokenIds, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
+    }
+
+    function testItReturnsPositionId() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        uint256 positionId = p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // assert
+        order.isLong = !order.isLong;
+        assertEq(positionId, uint256(p.hashOrder(order)), "Should have returned position id");
     }
 
     function testItFillsOrder(PuttyV2.Order memory order) public {

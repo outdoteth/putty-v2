@@ -78,6 +78,7 @@ contract TestExercise is Fixture {
     function testItCannotSetFloorAssetTokenIdsIfCall() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
+        order.isCall = true;
         bytes memory signature = signOrder(babePrivateKey, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
         floorAssetTokenIds.push(0x123);
@@ -134,7 +135,7 @@ contract TestExercise is Fixture {
         assertEq(p.exercisedPositions(positionId), true, "Should have marked position as exercised");
     }
 
-    function testItSavesThePositionsFloorTokenIds() public {
+    function testItSavesThePositionsFloorTokenIdsIfPut() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
 
@@ -168,16 +169,21 @@ contract TestExercise is Fixture {
         PuttyV2.Order memory order = defaultOrder();
         bytes memory signature = signOrder(babePrivateKey, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
+        uint256 balanceBefore = weth.balanceOf(address(p));
 
         // act
         order.isLong = true;
         p.exercise(order, floorAssetTokenIds);
 
         // assert
-        assertEq(weth.balanceOf(address(p)), order.strike, "Should have transferred strike from exerciser to contract");
+        assertEq(
+            weth.balanceOf(address(p)) - balanceBefore,
+            order.strike,
+            "Should have transferred strike from exerciser to contract"
+        );
     }
 
-    function testItReceivesAssetsFromExerciserForCall() public {
+    function testItSendsAssetsToExerciserForCall() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
 
@@ -288,6 +294,7 @@ contract TestExercise is Fixture {
         PuttyV2.Order memory order = defaultOrder();
         bytes memory signature = signOrder(babePrivateKey, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
+        uint256 balanceBefore = weth.balanceOf(address(p));
 
         // act
         order.isLong = true;
@@ -295,7 +302,7 @@ contract TestExercise is Fixture {
 
         // assert
         assertEq(
-            weth.balanceOf(address(p)),
+            weth.balanceOf(address(p)) - balanceBefore,
             order.strike,
             "Should have transferred strike from exerciser to contract and converted to WETH"
         );

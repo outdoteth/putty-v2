@@ -292,7 +292,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // check base asset exists
         require(order.baseAsset.code.length > 0, "baseAsset is not contract");
 
-        // check floor asset token ids length is 0 unless the order `type` is call and `side` is long
+        // check floor asset token ids length is 0 unless the order type is call and side is long
         order.isCall && order.isLong
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
             : require(floorAssetTokenIds.length == 0, "Invalid floor tokens length");
@@ -493,7 +493,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         // transfer strike to owner if put is expired or call is exercised
         if ((order.isCall && isExercised) || (!order.isCall && !isExercised)) {
-            // send the fee to the owner if fee is greater than 0%
+            // send the fee to the admin/DAO if fee is greater than 0%
             uint256 feeAmount = 0;
             if (fee > 0) {
                 feeAmount = (order.strike * fee) / 1000;
@@ -501,6 +501,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             }
 
             ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike - feeAmount);
+
             return;
         }
 
@@ -563,7 +564,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         @dev There is no need for floorTokenIds here because there is no situation in which
              it makes sense to have them when accepting counter offers. When accepting a counter 
              offer for a short call order, the complementary long call order already knows what 
-             tokenIds are used in the short call.
+             tokenIds are used in the short call so floorTokens should always be empty.
         @param order The counter offer to accept.
         @param signature The signature for the counter offer.
         @param originalOrder The original order that the counter was made for.
@@ -715,20 +716,6 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     }
 
     /**
-        @notice Encodes an array of erc721 assets following the eip-712 encoding scheme.
-        @param arr Array of erc721 assets to hash.
-        @return encoded The eip-712 encoded array of erc721 assets.
-     */
-    function encodeERC721Assets(ERC721Asset[] memory arr) public pure returns (bytes memory encoded) {
-        for (uint256 i = 0; i < arr.length; i++) {
-            encoded = abi.encodePacked(
-                encoded,
-                keccak256(abi.encode(ERC721ASSET_TYPE_HASH, arr[i].token, arr[i].tokenId))
-            );
-        }
-    }
-
-    /**
         @notice Encodes an array of erc20 assets following the eip-712 encoding scheme.
         @param arr Array of erc20 assets to hash.
         @return encoded The eip-712 encoded array of erc20 assets.
@@ -738,6 +725,20 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             encoded = abi.encodePacked(
                 encoded,
                 keccak256(abi.encode(ERC20ASSET_TYPE_HASH, arr[i].token, arr[i].tokenAmount))
+            );
+        }
+    }
+
+    /**
+        @notice Encodes an array of erc721 assets following the eip-712 encoding scheme.
+        @param arr Array of erc721 assets to hash.
+        @return encoded The eip-712 encoded array of erc721 assets.
+     */
+    function encodeERC721Assets(ERC721Asset[] memory arr) public pure returns (bytes memory encoded) {
+        for (uint256 i = 0; i < arr.length; i++) {
+            encoded = abi.encodePacked(
+                encoded,
+                keccak256(abi.encode(ERC721ASSET_TYPE_HASH, arr[i].token, arr[i].tokenId))
             );
         }
     }

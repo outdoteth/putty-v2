@@ -23,7 +23,7 @@ forge test
 
 ```
 Hello anon,
-would you like a cup of tea and a slice of pie while you read through?
+would you like a cup of tea and a slice of pie while you continue to read through?
 
              ;,'                     ,
      _o_    ;:;'     , ,               ;'
@@ -178,6 +178,12 @@ a) Bob exercised his put option. Alice then can withdraw the floor tokens that B
 b) Alice exercised her long call option. The floor tokens are sent to Alice.
 
 c) Alice let her long call option expire. The floor tokens are sent back to Bob.
+
+### Rebase and fee-on-transfer tokens
+
+There are various tokens with custom implementations of how user balances are updated over time.
+The most common of these are fee-on-transfer and rebase tokens.
+Due to the complexity and cost of persistent accounting we don't intend to support these tokens.
 
 ## Areas of concern for wardens
 
