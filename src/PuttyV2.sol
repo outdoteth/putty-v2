@@ -593,8 +593,12 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     function _transferERC20sIn(ERC20Asset[] memory assets, address from) internal {
         for (uint256 i = 0; i < assets.length; i++) {
             address token = assets[i].token;
+            uint256 tokenAmount = assets[i].tokenAmount;
+
             require(token.code.length > 0, "ERC20: Token is not contract");
-            ERC20(token).safeTransferFrom(from, address(this), assets[i].tokenAmount);
+            require(tokenAmount > 0, "ERC20: Amount too small");
+
+            ERC20(token).safeTransferFrom(from, address(this), tokenAmount);
         }
     }
 

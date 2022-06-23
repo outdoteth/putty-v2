@@ -51,7 +51,7 @@ contract TestIntegration is Fixture {
 
         for (uint256 i = 0; i < order.erc20Assets.length; i++) {
             order.erc20Assets[i].token = address(link);
-            order.erc20Assets[i].tokenAmount = i;
+            order.erc20Assets[i].tokenAmount = i + 1;
             deal(address(link), babe, link.balanceOf(babe) + order.erc20Assets[i].tokenAmount);
         }
 
@@ -111,7 +111,7 @@ contract TestIntegration is Fixture {
 
         for (uint256 i = 0; i < order.erc20Assets.length; i++) {
             order.erc20Assets[i].token = address(link);
-            order.erc20Assets[i].tokenAmount = i;
+            order.erc20Assets[i].tokenAmount = i + 1;
             deal(address(link), address(this), link.balanceOf(address(this)) + order.erc20Assets[i].tokenAmount);
         }
 
