@@ -12,6 +12,11 @@ import "solmate/tokens/ERC721.sol";
 
 import "./PuttyV2Nft.sol";
 
+/**
+    @title PuttyV2
+    @author out.eth
+    @notice an otc nft and erc20 option market
+ */
 contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Ownable {
     /* ~~~ TYPES ~~~ */
 
@@ -45,12 +50,21 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     /* ~~~ STATE VARIABLES ~~~ */
 
+    /**
+        @dev ERC721Asset type hash used for EIP-712 encoding.
+     */
     bytes32 public constant ERC721ASSET_TYPE_HASH =
         keccak256(abi.encodePacked("ERC721Asset(address token,uint256 tokenId)"));
 
+    /**
+        @dev ERC721Asset type hash used for EIP-712 encoding.
+     */
     bytes32 public constant ERC20ASSET_TYPE_HASH =
         keccak256(abi.encodePacked("ERC20Asset(address token,uint256 tokenAmount)"));
 
+    /**
+        @dev ERC721Asset type hash used for EIP-712 encoding.
+     */
     bytes32 public constant ORDER_TYPE_HASH =
         keccak256(
             abi.encodePacked(
@@ -74,23 +88,89 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             )
         );
 
+    /**
+        @dev Contract address for Wrapped Ethereum.
+     */
     address public immutable weth;
 
+    /**
+        @dev baseURI used to generate the tokenURI for PuttyV2 NFTs.
+    */
     string public baseURI;
+
+    /**
+        @notice Fee rate that is applied on exercise.
+    */
     uint256 public fee;
 
+    /**
+        @notice Whether or not an order has been cancelled. Maps 
+                from orderHash to isCancelled.
+    */
     mapping(bytes32 => bool) public cancelledOrders;
+
+    /**
+        @notice The current expiration timestamp of a position. Maps 
+                from positionId to an expiration unix timestamp.
+    */
     mapping(uint256 => uint256) public positionExpirations;
+
+    /**
+        @notice Whether or not a position has been exercised. Maps 
+                from positionId to isExercised.
+    */
     mapping(uint256 => bool) public exercisedPositions;
+
+    /**
+        @notice The floor asset token ids for a position. Maps from 
+                positionId to floor asset token ids. This should only 
+                be set for a long call position in `fillOrder`, or for 
+                a short put position in `exercise`.
+    */
     mapping(uint256 => uint256[]) public positionFloorAssetTokenIds;
 
     /* ~~~ EVENTS ~~~ */
 
+    /**
+        @notice Emitted when a new base URI is set.
+        @param baseURI The new baseURI.
+     */
     event NewBaseURI(string baseURI);
+
+    /**
+        @notice Emitted when a new fee is set.
+        @param fee The new fee.
+     */
     event NewFee(uint256 fee);
+
+    /**
+        @notice Emitted when an order is filled.
+        @param orderHash The hash of the order that was filled.
+        @param floorAssetTokenIds The floor asset token ids that were used.
+        @param order The order that was filled.
+     */
     event FilledOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, Order order);
+
+    /**
+        @notice Emitted when an order is exercised.
+        @param orderHash The hash of the order that was exercised.
+        @param floorAssetTokenIds The floor asset token ids that were used.
+        @param order The order that was exercised.
+     */
     event ExercisedOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, Order order);
+
+    /**
+        @notice Emitted when an order is withdrawn.
+        @param orderHash The hash of the order that was withdrawn.
+        @param order The order that was withdrawn.
+     */
     event WithdrawOrder(bytes32 indexed orderHash, Order order);
+
+    /**
+        @notice emitted When an order is cancelled.
+        @param orderHash The hash of the order that was cancelled.
+        @param order The order that was cancelled.
+     */
     event CancelledOrder(bytes32 indexed orderHash, Order order);
 
     constructor(
@@ -105,13 +185,23 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     /* ~~~ ADMIN FUNCTIONS ~~~ */
 
+    /**
+        @notice Sets a new baseURI that is used in the construction
+                of the tokenURI for each NFT position. Admin/DAO only.
+        @param _baseURI The new base URI to use.
+     */
     function setBaseURI(string memory _baseURI) public payable onlyOwner {
         baseURI = _baseURI;
 
         emit NewBaseURI(_baseURI);
     }
 
-    // _fee = 100% = 1000
+    /**
+        @notice Sets a new fee rate that is applied on exercise. The
+                fee has a precision of 1 decimal. e.g. 1000 = 100%,
+                100 = 10%, 1 = 0.1%. Admin/DAO only.
+        @param _fee The new fee rate to use.
+     */
     function setFee(uint256 _fee) public payable onlyOwner {
         require(_fee < 300, "fee must be less than 3%");
 
@@ -128,9 +218,18 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             [2] exercise()
             [3] withdraw()
 
-            * it is also possible to cancel() an order before fillOrder()
+            * It is also possible to cancel() an order before fillOrder()
     */
 
+    /**
+        @notice Fills an offchain order and settles it onchain. Mints two
+                NFTs that represent the long and short position for the order.
+        @param order The order to fill.
+        @param signature The signature for the order. Signature must recover to order.maker.
+        @param floorAssetTokenIds The floor asset token ids to use. Should only be set 
+               when filling a long call order.
+        @return positionId The id of the position NFT that the msg.sender receives.
+     */
     function fillOrder(
         Order memory order,
         bytes calldata signature,
@@ -237,6 +336,13 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
     }
 
+    /**
+        @notice Exercises a long order and also burns the long position NFT which 
+                represents it.
+        @param order The order of the position to exercise.
+        @param floorAssetTokenIds The floor asset token ids to use. Should only be set 
+               when exercising a put order.
+     */
     function exercise(Order memory order, uint256[] calldata floorAssetTokenIds) public payable {
         /* ~~~ CHECKS ~~~ */
 
@@ -308,6 +414,12 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
     }
 
+    /**
+        @notice Withdraws the assets from a short order and also burns the short position 
+                that represents it. The assets that are withdrawn are dependent on whether 
+                the order is exercised or expired and if the order is a put or call.
+        @param order The order to withdraw.
+     */
     function withdraw(Order memory order) public {
         /* ~~~ CHECKS ~~~ */
 
@@ -361,6 +473,10 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
     }
 
+    /**
+        @notice Cancels an order which prevents it from being filled in the future.
+        @param order The order to cancel.
+     */
     function cancel(Order memory order) public {
         require(msg.sender == order.maker, "Not your order");
 
@@ -374,6 +490,13 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     /* ~~~ PERIPHERY LOGIC FUNCTIONS ~~~ */
 
+    /**
+        @notice Batch fills multiple orders.
+        @param orders The order to fill.
+        @param signatures The signatures to use for each respective order.
+        @param floorAssetTokenIds The floorAssetTokenIds to use for each respective order.
+        @return positionIds The ids of the position NFT that the msg.sender receives.
+     */
     function batchFillOrder(
         Order[] memory orders,
         bytes[] calldata signatures,
@@ -389,6 +512,18 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
     }
 
+    /**
+        @notice Accepts a counter offer for an order. It fills the counter offer, and then
+                cancels the original order that the counter offer was made for.
+        @dev There is no need for floorTokenIds here because there is no situation in which
+             it makes sense to have them when accepting counter offers. When accepting a counter 
+             offer for a short call order, the complementary long call order already knows what 
+             tokenIds are used in the short call.
+        @param order The counter offer to accept.
+        @param signature The signature for the counter offer.
+        @param originalOrder The original order that the counter was made for.
+        @return positionId The id of the position NFT that the msg.sender receives.
+     */
     function acceptCounterOffer(
         Order memory order,
         bytes calldata signature,
@@ -404,18 +539,34 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     /* ~~~ HELPER FUNCTIONS ~~~ */
 
+    /**
+        @notice Transfers an array of erc20s into the contract from an address.
+        @param assets The erc20 tokens and amounts to transfer in.
+        @param from Who to transfer the erc20 assets from.
+     */
     function _transferERC20sIn(ERC20Asset[] memory assets, address from) internal {
         for (uint256 i = 0; i < assets.length; i++) {
             ERC20(assets[i].token).safeTransferFrom(from, address(this), assets[i].tokenAmount);
         }
     }
 
+    /**
+        @notice Transfers an array of erc721s into the contract from an address.
+        @param assets The erc721 tokens and token ids to transfer in.
+        @param from Who to transfer the erc721 assets from.
+     */
     function _transferERC721sIn(ERC721Asset[] memory assets, address from) internal {
         for (uint256 i = 0; i < assets.length; i++) {
             ERC721(assets[i].token).safeTransferFrom(from, address(this), assets[i].tokenId);
         }
     }
 
+    /**
+        @notice Transfers an array of erc721 floor tokens into the contract from an address.
+        @param floorTokens The contract addresses of each erc721.
+        @param floorTokenIds The token id of each erc721.
+        @param from Who to transfer the floor tokens from.
+     */
     function _transferFloorsIn(
         address[] memory floorTokens,
         uint256[] memory floorTokenIds,
@@ -426,24 +577,43 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
     }
 
+    /**
+        @notice Transfers an array of erc20 tokens to the msg.sender.
+        @param assets The erc20 tokens and amounts to send.
+     */
     function _transferERC20sOut(ERC20Asset[] memory assets) internal {
         for (uint256 i = 0; i < assets.length; i++) {
             ERC20(assets[i].token).safeTransfer(msg.sender, assets[i].tokenAmount);
         }
     }
 
+    /**
+        @notice Transfers an array of erc721 tokens to the msg.sender.
+        @param assets The erc721 tokens and token ids to send.
+     */
     function _transferERC721sOut(ERC721Asset[] memory assets) internal {
         for (uint256 i = 0; i < assets.length; i++) {
             ERC721(assets[i].token).safeTransferFrom(address(this), msg.sender, assets[i].tokenId);
         }
     }
 
+    /**
+        @notice Transfers an array of erc721 floor tokens to the msg.sender.
+        @param floorTokens The contract addresses for each floor token.
+        @param floorTokenIds The token id of each floor token.
+     */
     function _transferFloorsOut(address[] memory floorTokens, uint256[] memory floorTokenIds) internal {
         for (uint256 i = 0; i < floorTokens.length; i++) {
             ERC721(floorTokens[i]).safeTransferFrom(address(this), msg.sender, floorTokenIds[i]);
         }
     }
 
+    /**
+        @notice Checks whether or not an address exists in the whitelist.
+        @param whitelist The whitelist to check against.
+        @param target The target address to check.
+        @return If it exists in the whitelist or not.
+     */
     function isWhitelisted(address[] memory whitelist, address target) public pure returns (bool) {
         for (uint256 i = 0; i < whitelist.length; i++) {
             if (target == whitelist[i]) return true;
@@ -452,6 +622,12 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         return false;
     }
 
+    /**
+        @notice Get the orderHash for a complementary short/long order - e.g for a long order,
+                this returns the hash of it's opposite short order.
+        @param order The order to find the complementary long/short hash for.
+        @return orderHash The hash of the opposite order.
+     */
     function hashOppositeOrder(Order memory order) public view returns (bytes32 orderHash) {
         // use decode/encode to get a copy instead of reference
         Order memory oppositeOrder = abi.decode(abi.encode(order), (Order));
@@ -461,7 +637,13 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         orderHash = hashOrder(oppositeOrder);
     }
 
-    // hash order based on EIP-712 encoding
+    /* ~~~ EIP-712 HELPERS ~~~ */
+
+    /**
+        @notice Hashes an order based on the eip-712 encoding scheme.
+        @param order The order to hash.
+        @return orderHash The eip-712 compliant hash of the order.
+     */
     function hashOrder(Order memory order) public view returns (bytes32 orderHash) {
         orderHash = keccak256(
             abi.encode(
@@ -485,6 +667,11 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         orderHash = _hashTypedDataV4(orderHash);
     }
 
+    /**
+        @notice Encodes an array of erc721 assets following the eip-712 encoding scheme.
+        @param arr Array of erc721 assets to hash.
+        @return encoded The eip-712 encoded array of erc721 assets.
+     */
     function encodeERC721Assets(ERC721Asset[] memory arr) public pure returns (bytes memory encoded) {
         for (uint256 i = 0; i < arr.length; i++) {
             encoded = abi.encodePacked(
@@ -494,6 +681,11 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
     }
 
+    /**
+        @notice Encodes an array of erc20 assets following the eip-712 encoding scheme.
+        @param arr Array of erc20 assets to hash.
+        @return encoded The eip-712 encoded array of erc20 assets.
+     */
     function encodeERC20Assets(ERC20Asset[] memory arr) public pure returns (bytes memory encoded) {
         for (uint256 i = 0; i < arr.length; i++) {
             encoded = abi.encodePacked(
@@ -503,10 +695,20 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
     }
 
+    /**
+        @return The domain seperator used when calculating the eip-712 hash.
+     */
     function domainSeparatorV4() public view returns (bytes32) {
         return _domainSeparatorV4();
     }
 
+    /* ~~~ OVERRIDES ~~~ */
+
+    /**
+        @notice Gets the token URI for an NFT.
+        @param id The id of the position NFT.
+        @return The tokenURI of the position NFT.
+     */
     function tokenURI(uint256 id) public view override returns (string memory) {
         require(_ownerOf[id] != address(0), "URI query for NOT_MINTED token");
 
