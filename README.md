@@ -22,8 +22,7 @@ forge test
 ---
 
 ```
-Hello anon,
-would you like a cup of tea and a slice of pie while you continue to read through?
+feel free to have a cuppa and slice of pie while you continue to read through :)
 
              ;,'                     ,
      _o_    ;:;'     , ,               ;'
