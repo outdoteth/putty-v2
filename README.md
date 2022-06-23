@@ -5,6 +5,17 @@ This project uses the foundry framework for testing/deployment.
 
 ![Github Actions](https://github.com/foundry-rs/forge-template/workflows/Tests/badge.svg)
 
+```
+Would you like a cup of tea while you read through?
+
+             ;,'
+     _o_    ;:;'     , ,
+ ,-.'---`.__ ;        ,';
+((j`=====',-'       :----:
+ `-\     /         C|====|
+    `-=-'           `----'
+```
+
 ## Getting started
 
 1. Install `foundry`, refer to [foundry](https://github.com/foundry-rs/foundry)
