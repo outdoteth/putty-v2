@@ -337,6 +337,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // filling short put: transfer strike from maker to contract
         if (!order.isLong && !order.isCall) {
             ERC20(order.baseAsset).safeTransferFrom(order.maker, address(this), order.strike);
+            return positionId;
         }
 
         // filling long put: transfer strike from taker to contract
@@ -353,12 +354,15 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             } else {
                 ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
             }
+
+            return positionId;
         }
 
         // filling short call: transfer assets from maker to contract
         if (!order.isLong && order.isCall) {
             _transferERC20sIn(order.erc20Assets, order.maker);
             _transferERC721sIn(order.erc721Assets, order.maker);
+            return positionId;
         }
 
         // filling long call: transfer assets from taker to contract
@@ -366,6 +370,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             _transferERC20sIn(order.erc20Assets, msg.sender);
             _transferERC721sIn(order.erc721Assets, msg.sender);
             _transferFloorsIn(order.floorTokens, floorAssetTokenIds, msg.sender);
+            return positionId;
         }
     }
 
@@ -491,6 +496,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             }
 
             ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike - feeAmount);
+            return;
         }
 
         // transfer assets from putty to owner if put is exercised or call is expired
@@ -503,6 +509,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
                 // and for put options floor tokens ids saved in the short position in exercise()
                 positionFloorAssetTokenIds[order.isCall ? longPositionId : uint256(orderHash)]
             );
+
+            return;
         }
     }
 

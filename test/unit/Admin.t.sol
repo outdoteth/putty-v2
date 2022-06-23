@@ -39,7 +39,7 @@ contract TestAdmin is Fixture {
 
     function testItSetsFee() public {
         // arrange
-        uint256 fee = 100;
+        uint256 fee = 10;
 
         // act
         p.setFee(fee);
@@ -50,7 +50,7 @@ contract TestAdmin is Fixture {
 
     function testItCannotSetFeeGreaterThan3Percent() public {
         // arrange
-        uint256 fee = 301;
+        uint256 fee = 31;
 
         // act
         vm.expectRevert("fee must be less than 3%");
@@ -67,7 +67,7 @@ contract TestAdmin is Fixture {
     function testItEmitsNewFeeOnSetFee() public {
         // act
         vm.expectEmit(false, false, false, true);
-        emit NewFee(299);
-        p.setFee(299);
+        emit NewFee(20);
+        p.setFee(20);
     }
 }
