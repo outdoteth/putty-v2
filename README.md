@@ -6,7 +6,8 @@ This project uses the foundry framework for testing/deployment.
 ![Github Actions](https://github.com/foundry-rs/forge-template/workflows/Tests/badge.svg)
 
 ```
-Would you like a cup of tea and a slice of pie while you read through?
+Hello anon,
+would you like a cup of tea and a slice of pie while you read through?
 
              ;,'                     ,
      _o_    ;:;'     , ,               ;'
