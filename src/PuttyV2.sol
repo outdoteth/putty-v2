@@ -31,7 +31,7 @@ pragma solidity 0.8.13;
 
     this is a public good.
     by out.eth and tamagoyaki
-                                                                 
+    
  */
 
 import "./lib/IWETH.sol";
@@ -506,7 +506,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             _transferFloorsOut(
                 order.floorTokens,
                 // for call options the floor token ids are saved in the long position in fillOrder(),
-                // and for put options floor tokens ids saved in the short position in exercise()
+                // and for put options the floor tokens ids are saved in the short position in exercise()
                 positionFloorAssetTokenIds[order.isCall ? longPositionId : uint256(orderHash)]
             );
 
@@ -587,7 +587,9 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
      */
     function _transferERC20sIn(ERC20Asset[] memory assets, address from) internal {
         for (uint256 i = 0; i < assets.length; i++) {
-            ERC20(assets[i].token).safeTransferFrom(from, address(this), assets[i].tokenAmount);
+            address token = assets[i].token;
+            require(token.code.length > 0, "ERC20: Token is not contract");
+            ERC20(token).safeTransferFrom(from, address(this), assets[i].tokenAmount);
         }
     }
 
