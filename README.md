@@ -40,8 +40,8 @@ To run the tests:
 3. Install `yarn`, `npm install --global yarn`
 
 ```
-yarn
-forge test --gas-report
+$ yarn
+$ forge test --gas-report
 ```
 
 ## Flow

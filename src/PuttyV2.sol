@@ -236,7 +236,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         @param _fee The new fee rate to use.
      */
     function setFee(uint256 _fee) public payable onlyOwner {
-        require(_fee < 300, "fee must be less than 3%");
+        require(_fee < 30, "fee must be less than 3%");
 
         fee = _fee;
 
