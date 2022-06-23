@@ -5,18 +5,6 @@ This project uses the foundry framework for testing/deployment.
 
 ![Github Actions](https://github.com/foundry-rs/forge-template/workflows/Tests/badge.svg)
 
-```
-Hello anon,
-would you like a cup of tea and a slice of pie while you read through?
-
-             ;,'                     ,
-     _o_    ;:;'     , ,               ;'
- ,-.'---`.__ ;        ,';             ' ;
-((j`=====',-'       :----:           _.-._
-_`-\     / ________C|====|________.:::::::::.______
-    `-=-'           `----'        ~\_______/~
-```
-
 ## Getting started
 
 1. Install `foundry`, refer to [foundry](https://github.com/foundry-rs/foundry)
@@ -29,6 +17,20 @@ Clone the repo and then run:
 yarn
 forge install
 forge test
+```
+
+---
+
+```
+Hello anon,
+would you like a cup of tea and a slice of pie while you read through?
+
+             ;,'                     ,
+     _o_    ;:;'     , ,               ;'
+ ,-.'---`.__ ;        ,';             ' ;
+((j`=====',-'       :----:           _.-._
+_`-\     / ________C|====|________.:::::::::.______
+    `-=-'           `----'        ~\_______/~
 ```
 
 ## Links
@@ -101,7 +103,7 @@ Here is an example flow for filling a long put option.
 - Bob takes Alice's order and fills it by sumbitting it to the Putty smart contract using `fillOrder()`
 - He sends 124 ETH to cover the strike which is converted to WETH. 0.8 WETH is transferred from Alice's wallet to Bob's wallet.
 - A long NFT is sent to Alice and a short NFT is sent to Bob which represents their position in the trade
-- 17 days pass and the floor price for Bored Apes has dropped to 54 ETH - (`2 * 54 = 108 ETH = 16 ETH profit`)
+- 17 days pass and the floor price for Bored Apes has dropped to 54 ETH - (`2 * 54 = 108 ETH. 124 - 108 = 16 ETH profit for Alice.`)
 - Alice decides to exercise her long put contract and lock in her 16 ETH profit
   - She purchases BAYC #541 and BAYC #8765 from the open market for a combined total of 108 ETH
   - She calls exercise() on Putty and sends her BAYC id's of [#541, #8765]
