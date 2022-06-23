@@ -6,14 +6,14 @@ This project uses the foundry framework for testing/deployment.
 ![Github Actions](https://github.com/foundry-rs/forge-template/workflows/Tests/badge.svg)
 
 ```
-Would you like a cup of tea while you read through?
+Would you like a cup of tea and a slice of pie while you read through?
 
-             ;,'
-     _o_    ;:;'     , ,
- ,-.'---`.__ ;        ,';
-((j`=====',-'       :----:
- `-\     /         C|====|
-    `-=-'           `----'
+             ;,'                      ,
+     _o_    ;:;'     , ,                ;'
+ ,-.'---`.__ ;        ,';              ' ;
+((j`=====',-'       :----:            _.-._
+_`-\     / ________C|====|_______.-=' / | \ `=-.
+    `-=-'           `----'        \,.________.,/
 ```
 
 ## Getting started
