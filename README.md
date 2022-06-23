@@ -3,6 +3,16 @@
 An order-book based american options market for NFTs and ERC20s.
 This project uses the foundry framework for testing/deployment.
 
+## Getting started
+
+Clone the repo and then run:
+
+```
+yarn
+forge install
+forge test
+```
+
 ## Links
 
 - Rinkeby demo site: [rinkeby.putty.finance](https://rinkeby.putty.finance)
@@ -127,7 +137,7 @@ There is one area of the code that is perhaps not so intuitive. That is, `floorT
 
 The idea is that Alice can create a put option with 3 `floorTokens (address[])` and then when Bob wants to exercise he can send _any_ 3 tokens from the collections listed in `floorTokens`. Because he can use _any_ token from the collection, it essentially replicates a floor option; when exercising, he will always choose the lowest value tokens - floors.
 
-Similarly Alice can create an off-chain order for a long call option with 5 `floorTokens (address[])`. Bob can fill this order (`fillOrder`) and send any 5 tokens from the collections listed in `floorTokens` as collateral.
+Similarly Alice can create an off-chain order for a long call option with 5 `floorTokens (address[])`. Bob can fill this order (`fillOrder`) and send any 5 tokens (`floorTokenIds`) from the collections listed in `floorTokens` as collateral.
 
 When an exercise or fillOrder happens, we save the floorTokenIds that Bob used in `positionFloorAssetTokenIds`. This is so that we can reference them later for the following situations;
 
