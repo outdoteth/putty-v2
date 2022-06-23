@@ -1,5 +1,38 @@
-// SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.13;
+
+/**
+
+    ██████╗ ██╗   ██╗████████╗████████╗██╗   ██╗    ██╗   ██╗██████╗ 
+    ██╔══██╗██║   ██║╚══██╔══╝╚══██╔══╝╚██╗ ██╔╝    ██║   ██║╚════██╗
+    ██████╔╝██║   ██║   ██║      ██║    ╚████╔╝     ██║   ██║ █████╔╝
+    ██╔═══╝ ██║   ██║   ██║      ██║     ╚██╔╝      ╚██╗ ██╔╝██╔═══╝ 
+    ██║     ╚██████╔╝   ██║      ██║      ██║        ╚████╔╝ ███████╗
+    ╚═╝      ╚═════╝    ╚═╝      ╚═╝      ╚═╝         ╚═══╝  ╚══════╝
+    
+                                
+            _..._               
+          .'     '.      _       
+         /    .-""-\   _/ \ 
+       .-|   /:.   |  |   |   bussin
+       |  \  |:.   /.-'-./
+       | .-'-;:__.'    =/
+       .'=  *=|     _.='
+      /   _.  |    ;        minister you satoshi
+     ;-.-'|    \   |
+    /   | \    _\  _\
+    \__/'._;.  ==' ==\
+             \    \   |
+             /    /   / 
+             /-._/-._/
+      jgs    \   `\  \
+              `-._/._/
+
+
+    this is a public good.
+    by out.eth and tamagoyaki
+                                                                 
+ */
 
 import "./lib/IWETH.sol";
 
@@ -15,7 +48,7 @@ import "./PuttyV2Nft.sol";
 /**
     @title PuttyV2
     @author out.eth
-    @notice an otc nft and erc20 option market
+    @notice An otc erc721 and erc20 option market.
  */
 contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Ownable {
     /* ~~~ TYPES ~~~ */
