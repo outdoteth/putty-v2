@@ -8,12 +8,12 @@ This project uses the foundry framework for testing/deployment.
 ```
 Would you like a cup of tea and a slice of pie while you read through?
 
-             ;,'                      ,
-     _o_    ;:;'     , ,                ;'
- ,-.'---`.__ ;        ,';              ' ;
-((j`=====',-'       :----:            _.-._
-_`-\     / ________C|====|_______.-=' / | \ `=-.
-    `-=-'           `----'        \,.________.,/
+             ;,'                     ,
+     _o_    ;:;'     , ,               ;'
+ ,-.'---`.__ ;        ,';             ' ;
+((j`=====',-'       :----:           _.-._
+_`-\     / ________C|====|________.:::::::::.
+    `-=-'           `----'        ~\_______/~
 ```
 
 ## Getting started
