@@ -537,7 +537,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     /**
         @notice Batch fills multiple orders.
-        @param orders The order to fill.
+        @param orders The orders to fill.
         @param signatures The signatures to use for each respective order.
         @param floorAssetTokenIds The floorAssetTokenIds to use for each respective order.
         @return positionIds The ids of the position NFT that the msg.sender receives.
