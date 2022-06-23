@@ -85,17 +85,17 @@ There exists much more rigorous specification files in `./spec` with diagrams in
 
 ## Libraries
 
-- [openzeppelin/utils/cryptography/SignatureChecker.sol](./lib/openzeppelin-contracts/contracts/utils/cryptography/SignatureChecker.sol)
+- [openzeppelin/utils/cryptography/SignatureChecker.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/6766b2de3bd0473bb7107fd8f83ef8c83c5b1fb3/contracts/utils/cryptography/SignatureChecker.sol)
 
-- [openzeppelin/utils/cryptography/draft-EIP712.sol](./lib/openzeppelin-contracts/contracts/utils/cryptography/draft-EIP712.sol)
+- [openzeppelin/utils/cryptography/draft-EIP712.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/6766b2de3bd0473bb7107fd8f83ef8c83c5b1fb3/contracts/utils/cryptography/draft-EIP712.sol)
 
-- [openzeppelin/utils/Strings.sol](./lib/openzeppelin-contracts/contracts/utils/Strings.sol)
+- [openzeppelin/utils/Strings.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/6766b2de3bd0473bb7107fd8f83ef8c83c5b1fb3/contracts/utils/Strings.sol)
 
-- [openzeppelin/utils/access/Ownable.sol](./lib/openzeppelin-contracts/utils/access/Ownable.sol)
+- [openzeppelin/utils/access/Ownable.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/6766b2de3bd0473bb7107fd8f83ef8c83c5b1fb3/contracts/access/Ownable.sol)
 
-- [solmate/utils/SafeTransferLib.sol](./lib/solmate/src/utils/SafeTransferLib.sol")
+- [solmate/utils/SafeTransferLib.sol](https://github.com/Rari-Capital/solmate/blob/eaaccf88ac5290299884437e1aee098a96583d54/src/utils/SafeTransferLib.sol)
 
-- [solmate/tokens/ERC721.sol](./lib/solmate/src/tokens/ERC721.sol")
+- [solmate/tokens/ERC721.sol](https://github.com/Rari-Capital/solmate/blob/eaaccf88ac5290299884437e1aee098a96583d54/src/tokens/ERC721.sol)
 
 ## Optimisations
 
