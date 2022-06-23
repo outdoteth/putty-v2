@@ -5,6 +5,10 @@ This project uses the foundry framework for testing/deployment.
 
 ## Getting started
 
+1. Install `foundry`, refer to [foundry](https://github.com/foundry-rs/foundry)
+2. Install `nodejs`, refer to [nodejs](https://nodejs.org/en/)
+3. Install `yarn`, `npm install --global yarn`
+
 Clone the repo and then run:
 
 ```
@@ -43,15 +47,8 @@ Will usually answer within 45 mins unless I'm eating or smth. heh.
 
 There is a full test-suite included in `./test/`. There is also a differential test suite included in `./test/differential/`. By default the differential tests are disabled. To run them follow the instructions in the README in `./test/differential/`.
 
-To run the tests:
-
-1. Install `foundry`, refer to [foundry](https://github.com/foundry-rs/foundry)
-2. Install `nodejs`, refer to [nodejs](https://nodejs.org/en/)
-3. Install `yarn`, `npm install --global yarn`
-
 ```
-$ yarn
-$ forge test --gas-report
+forge test --gas-report
 ```
 
 ## Flow
