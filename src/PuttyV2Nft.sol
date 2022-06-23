@@ -17,15 +17,22 @@ abstract contract PuttyV2Nft is ERC721("Putty", "OPUT") {
         emit Transfer(address(0), to, id);
     }
 
-    // burns a token without checking owner address is not 0
-    // and removes balanceOf modifications
-    function _burn(uint256 id) internal override {
-        address owner = _ownerOf[id];
+    function transferFrom(
+        address from,
+        address to,
+        uint256 id
+    ) public override {
+        require(from == _ownerOf[id], "WRONG_FROM");
+        require(to != address(0), "INVALID_RECIPIENT");
+        require(
+            msg.sender == from || isApprovedForAll[from][msg.sender] || msg.sender == getApproved[id],
+            "NOT_AUTHORIZED"
+        );
 
-        delete _ownerOf[id];
+        _ownerOf[id] = to;
         delete getApproved[id];
 
-        emit Transfer(owner, address(0), id);
+        emit Transfer(from, to, id);
     }
 
     // set balanceOf to max for all users

@@ -211,6 +211,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         uint256 _fee,
         address _weth
     ) {
+        require(_weth != address(0), "Unset weth address");
+
         setBaseURI(_baseURI);
         setFee(_fee);
         weth = _weth;
@@ -492,7 +494,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // transfer strike to owner if put is expired or call is exercised
         if ((order.isCall && isExercised) || (!order.isCall && !isExercised)) {
             // send the fee to the owner if fee is greater than 0%
-            uint256 feeAmount;
+            uint256 feeAmount = 0;
             if (fee > 0) {
                 feeAmount = (order.strike * fee) / 1000;
                 ERC20(order.baseAsset).safeTransfer(owner(), feeAmount);
@@ -506,12 +508,11 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         if ((order.isCall && !isExercised) || (!order.isCall && isExercised)) {
             _transferERC20sOut(order.erc20Assets);
             _transferERC721sOut(order.erc721Assets);
-            _transferFloorsOut(
-                order.floorTokens,
-                // for call options the floor token ids are saved in the long position in fillOrder(),
-                // and for put options the floor tokens ids are saved in the short position in exercise()
-                positionFloorAssetTokenIds[order.isCall ? longPositionId : uint256(orderHash)]
-            );
+
+            // for call options the floor token ids are saved in the long position in fillOrder(),
+            // and for put options the floor tokens ids are saved in the short position in exercise()
+            uint256 floorPositionId = order.isCall ? longPositionId : uint256(orderHash);
+            _transferFloorsOut(order.floorTokens, positionFloorAssetTokenIds[floorPositionId]);
 
             return;
         }
@@ -573,12 +574,12 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         bytes calldata signature,
         Order memory originalOrder
     ) public payable returns (uint256 positionId) {
+        // cancel the original order
+        cancel(originalOrder);
+
         // accept the counter offer
         uint256[] memory floorAssetTokenIds = new uint256[](0);
         positionId = fillOrder(order, signature, floorAssetTokenIds);
-
-        // cancel the original order
-        cancel(originalOrder);
     }
 
     /* ~~~ HELPER FUNCTIONS ~~~ */
