@@ -54,7 +54,7 @@ Will usually answer within 45 mins unless I'm eating or smth. heh.
 
 | Name               | LOC | Purpose                                                   |
 | ------------------ | --- | --------------------------------------------------------- |
-| **PuttyV2.sol**    | 327 | Entry point to the protocol. Holds the business logic.    |
+| **PuttyV2.sol**    | 328 | Entry point to the protocol. Holds the business logic.    |
 | **PuttyV2Nft.sol** | 21  | NFT contract to represent Putty short and long positions. |
 
 ## Tests

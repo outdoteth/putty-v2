@@ -6,7 +6,6 @@ import "openzeppelin/utils/Strings.sol";
 
 // removes balanceOf modifications
 // questionable tradeoff but given our use-case it's reasonable
-// saves 20k gas when minting which about 30% gas on buys/vault creations
 abstract contract PuttyV2Nft is ERC721("Putty", "OPUT") {
     // remove balanceOf modifications
     function _mint(address to, uint256 id) internal override {

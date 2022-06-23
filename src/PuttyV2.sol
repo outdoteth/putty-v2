@@ -288,7 +288,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         require(block.timestamp < order.expiration, "Order has expired");
 
         // check base asset exists
-        require(order.baseAsset.code.length > 0, "ERC20: Token is not contract");
+        require(order.baseAsset.code.length > 0, "baseAsset is not contract");
 
         // check floor asset token ids length is 0 unless the order `type` is call and `side` is long
         order.isCall && order.isLong
