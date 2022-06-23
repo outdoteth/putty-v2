@@ -65,6 +65,25 @@ There is a full test-suite included in `./test/`. There is also a differential t
 forge test --gas-report
 ```
 
+## Static analysis
+
+We use [slither](https://github.com/crytic/slither) for static analysis.
+
+Installation:
+
+```
+pip3 install slither-analyzer
+pip3 install solc-select
+solc-select install 0.8.13
+solc-select use 0.8.13
+```
+
+Then to run:
+
+```
+yarn slither
+```
+
 ## Flow
 
 There are four types of orders that a user can create.
