@@ -17,6 +17,7 @@ abstract contract PuttyV2Nft is ERC721("Putty", "OPUT") {
         emit Transfer(address(0), to, id);
     }
 
+    // remove balanceOf modifications
     function transferFrom(
         address from,
         address to,
