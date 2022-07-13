@@ -44,6 +44,19 @@ contract TestCancel is Fixture {
         assertEq(p.cancelledOrders(p.hashOrder(order)), true, "Should have marked order as cancelled");
     }
 
+    function testItCannotCancelOrderThatHasBeenFilled() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature = signOrder(babePrivateKey, order);
+        uint256[] memory floorAssetTokenIds = new uint256[](0);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // act
+        vm.prank(babe);
+        vm.expectRevert("Order already filled");
+        p.cancel(order);
+    }
+
     function testItEmitsCancelledOrder() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
