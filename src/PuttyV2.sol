@@ -323,6 +323,9 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             require(order.floorTokens.length == 0, "Short call cant have floorTokens");
         }
 
+        // check native eth is only used if baseAsset is weth
+        require(msg.value == 0 || order.baseAsset == address(weth), "Cannot use native ETH");
+
         // check floor asset token ids length is 0 unless the order type is call and side is long
         order.isCall && order.isLong
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
@@ -368,7 +371,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             }
         } else {
             // handle the case where the user uses native ETH instead of WETH to pay the premium
-            if (weth == order.baseAsset && msg.value > 0) {
+            if (msg.value > 0) {
                 // check enough ETH was sent to cover the premium
                 require(msg.value == order.premium, "Incorrect ETH amount sent");
 
@@ -400,7 +403,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // filling long put: transfer strike from taker to contract
         if (order.isLong && !order.isCall) {
             // handle the case where the taker uses native ETH instead of WETH to deposit the strike
-            if (weth == order.baseAsset && msg.value > 0) {
+            if (msg.value > 0) {
                 // check enough ETH was sent to cover the strike
                 require(msg.value == order.strike, "Incorrect ETH amount sent");
 
@@ -424,6 +427,9 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         // filling long call: transfer assets from taker to contract
         if (order.isLong && order.isCall) {
+            // long calls never need native ETH
+            require(msg.value == 0, "Long call can't use native ETH");
+
             _transferERC20sIn(order.erc20Assets, msg.sender);
             _transferERC721sIn(order.erc721Assets, msg.sender);
             _transferFloorsIn(order.floorTokens, floorAssetTokenIds, msg.sender);
@@ -452,6 +458,9 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // check position has not expired
         require(block.timestamp < positionExpirations[uint256(orderHash)], "Position has expired");
 
+        // check native eth is only used if baseAsset is weth
+        require(msg.value == 0 || order.baseAsset == address(weth), "Cannot use native ETH");
+
         // check floor asset token ids length is 0 unless the position type is put
         !order.isCall
             ? require(floorAssetTokenIds.length == order.floorTokens.length, "Wrong amount of floor tokenIds")
@@ -477,7 +486,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             // transfer strike from exerciser to putty
             // handle the case where the taker uses native ETH instead of WETH to pay the strike
             if (order.strike > 0) {
-                if (weth == order.baseAsset && msg.value > 0) {
+                if (msg.value > 0) {
                     // check enough ETH was sent to cover the strike
                     require(msg.value == order.strike, "Incorrect ETH amount sent");
 
@@ -496,6 +505,8 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             _transferFloorsOut(order.floorTokens, positionFloorAssetTokenIds[uint256(orderHash)]);
         } else {
             // -- exercising a put option
+            // exercising a put never needs native ETH
+            require(msg.value == 0, "Puts can't use native ETH");
 
             // save the floor asset token ids to the short position
             uint256 shortPositionId = uint256(hashOppositeOrder(order));
