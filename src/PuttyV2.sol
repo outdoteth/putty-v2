@@ -128,7 +128,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     string public baseURI;
 
     /**
-        @notice Fee rate that is applied on exercise.
+        @notice Fee rate that is applied on premiums.
     */
     uint256 public fee;
 
@@ -158,6 +158,11 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     */
     mapping(uint256 => uint256[]) public positionFloorAssetTokenIds;
 
+    /**
+        @notice The total unclaimed premium fees for each asset.
+    */
+    mapping(address => uint256) public unclaimedFees;
+
     /* ~~~ EVENTS ~~~ */
 
     /**
@@ -171,6 +176,14 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         @param fee The new fee.
      */
     event NewFee(uint256 fee);
+
+    /**
+        @notice Emitted when fees are withdrawn.
+        @param asset The asset which fees are being withdrawn for.
+        @param fees The amount of fees that are being withdrawn.
+        @param recipient The recipient address for the fees.
+     */
+    event WithdrewFees(address indexed asset, uint256 fees, address recipient);
 
     /**
         @notice Emitted when an order is filled.
@@ -228,7 +241,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     }
 
     /**
-        @notice Sets a new fee rate that is applied on exercise. The
+        @notice Sets a new fee rate that is applied on premiums. The
                 fee has a precision of 1 decimal. e.g. 1000 = 100%,
                 100 = 10%, 1 = 0.1%. Admin/DAO only.
         @param _fee The new fee rate to use.
@@ -239,6 +252,23 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         fee = _fee;
 
         emit NewFee(_fee);
+    }
+
+    /**
+        @notice Withdraws the fees that have been collected from premiums for a particular asset.
+        @param asset The asset to collect fees for.
+        @param recipient The recipient address for the unclaimed fees.
+     */
+    function withdrawFees(address asset, address recipient) public payable onlyOwner {
+        uint256 fees = unclaimedFees[asset];
+
+        // reset the fees
+        unclaimedFees[asset] = 0;
+
+        emit WithdrewFees(asset, fees, recipient);
+
+        // send the fees to the recipient
+        ERC20(asset).transfer(recipient, fees);
     }
 
     /*
@@ -320,9 +350,22 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         /* ~~~ INTERACTIONS ~~~ */
 
+        // calculate the fee amount
+        uint256 feeAmount = 0;
+        if (fee > 0) {
+            feeAmount = (order.premium * fee) / 1000;
+            unclaimedFees[order.baseAsset] += feeAmount;
+        }
+
         // transfer premium to whoever is short from whomever is long
         if (order.isLong) {
-            ERC20(order.baseAsset).safeTransferFrom(order.maker, msg.sender, order.premium);
+            // transfer premium to taker
+            ERC20(order.baseAsset).safeTransferFrom(order.maker, msg.sender, order.premium - feeAmount);
+
+            // collect fees
+            if (feeAmount > 0) {
+                ERC20(order.baseAsset).safeTransferFrom(order.maker, address(this), feeAmount);
+            }
         } else {
             // handle the case where the user uses native ETH instead of WETH to pay the premium
             if (weth == order.baseAsset && msg.value > 0) {
@@ -333,10 +376,18 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
                 // converting to WETH instead of forwarding native ETH to the maker has two benefits;
                 // 1) active market makers will mostly be using WETH not native ETH
                 // 2) attack surface for re-entrancy is reduced
-                IWETH(weth).deposit{value: msg.value}();
-                IWETH(weth).transfer(order.maker, msg.value);
+                IWETH(weth).deposit{value: order.premium}();
+
+                // collect fees and transfer to premium to maker
+                IWETH(weth).transfer(order.maker, order.premium - feeAmount);
             } else {
-                ERC20(order.baseAsset).safeTransferFrom(msg.sender, order.maker, order.premium);
+                // transfer premium to maker
+                ERC20(order.baseAsset).safeTransferFrom(msg.sender, order.maker, order.premium - feeAmount);
+
+                // collect fees
+                if (feeAmount > 0) {
+                    ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), feeAmount);
+                }
             }
         }
 
@@ -496,15 +547,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         // transfer strike to owner if put is expired or call is exercised
         if ((order.isCall && isExercised) || (!order.isCall && !isExercised)) {
-            // send the fee to the admin/DAO if fee is greater than 0%
-            uint256 feeAmount = 0;
-            if (fee > 0) {
-                feeAmount = (order.strike * fee) / 1000;
-                ERC20(order.baseAsset).safeTransfer(owner(), feeAmount);
-            }
-
-            ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike - feeAmount);
-
+            ERC20(order.baseAsset).safeTransfer(msg.sender, order.strike);
             return;
         }
 
