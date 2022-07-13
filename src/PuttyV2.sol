@@ -86,39 +86,35 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     /**
         @dev ERC721Asset type hash used for EIP-712 encoding.
      */
-    bytes32 public constant ERC721ASSET_TYPE_HASH =
-        keccak256(abi.encodePacked("ERC721Asset(address token,uint256 tokenId)"));
+    bytes32 public constant ERC721ASSET_TYPE_HASH = keccak256("ERC721Asset(address token,uint256 tokenId)");
 
     /**
         @dev ERC20Asset type hash used for EIP-712 encoding.
      */
-    bytes32 public constant ERC20ASSET_TYPE_HASH =
-        keccak256(abi.encodePacked("ERC20Asset(address token,uint256 tokenAmount)"));
+    bytes32 public constant ERC20ASSET_TYPE_HASH = keccak256("ERC20Asset(address token,uint256 tokenAmount)");
 
     /**
         @dev ERC721Asset type hash used for EIP-712 encoding.
      */
     bytes32 public constant ORDER_TYPE_HASH =
         keccak256(
-            abi.encodePacked(
-                "Order(",
-                "address maker,",
-                "bool isCall,",
-                "bool isLong,",
-                "address baseAsset,",
-                "uint256 strike,",
-                "uint256 premium,",
-                "uint256 duration,",
-                "uint256 expiration,",
-                "uint256 nonce,",
-                "address[] whitelist,",
-                "address[] floorTokens,",
-                "ERC20Asset[] erc20Assets,",
-                "ERC721Asset[] erc721Assets",
-                ")",
-                "ERC20Asset(address token,uint256 tokenAmount)",
-                "ERC721Asset(address token,uint256 tokenId)"
-            )
+            "Order("
+            "address maker,"
+            "bool isCall,"
+            "bool isLong,"
+            "address baseAsset,"
+            "uint256 strike,"
+            "uint256 premium,"
+            "uint256 duration,"
+            "uint256 expiration,"
+            "uint256 nonce,"
+            "address[] whitelist,"
+            "address[] floorTokens,"
+            "ERC20Asset[] erc20Assets,"
+            "ERC721Asset[] erc721Assets"
+            ")"
+            "ERC20Asset(address token,uint256 tokenAmount)"
+            "ERC721Asset(address token,uint256 tokenId)"
         );
 
     /**
@@ -291,6 +287,11 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         // check base asset exists
         require(order.baseAsset.code.length > 0, "baseAsset is not contract");
+
+        // check short call doesn't have floor tokens
+        if (order.isCall && !order.isLong) {
+            require(order.floorTokens.length == 0, "Short call cant have floorTokens");
+        }
 
         // check floor asset token ids length is 0 unless the order type is call and side is long
         order.isCall && order.isLong
