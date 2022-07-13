@@ -697,7 +697,9 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
      */
     function _transferERC20sOut(ERC20Asset[] memory assets) internal {
         for (uint256 i = 0; i < assets.length; i++) {
-            ERC20(assets[i].token).safeTransfer(msg.sender, assets[i].tokenAmount);
+            if (assets[i].tokenAmount > 0) {
+                ERC20(assets[i].token).safeTransfer(msg.sender, assets[i].tokenAmount);
+            }
         }
     }
 
