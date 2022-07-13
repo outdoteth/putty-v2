@@ -425,16 +425,18 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
             // transfer strike from exerciser to putty
             // handle the case where the taker uses native ETH instead of WETH to pay the strike
-            if (weth == order.baseAsset && msg.value > 0) {
-                // check enough ETH was sent to cover the strike
-                require(msg.value == order.strike, "Incorrect ETH amount sent");
+            if (order.strike > 0) {
+                if (weth == order.baseAsset && msg.value > 0) {
+                    // check enough ETH was sent to cover the strike
+                    require(msg.value == order.strike, "Incorrect ETH amount sent");
 
-                // convert ETH to WETH
-                // we convert the strike ETH to WETH so that the logic in withdraw() works
-                // - because withdraw() assumes an ERC20 interface on the base asset.
-                IWETH(weth).deposit{value: msg.value}();
-            } else {
-                ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
+                    // convert ETH to WETH
+                    // we convert the strike ETH to WETH so that the logic in withdraw() works
+                    // - because withdraw() assumes an ERC20 interface on the base asset.
+                    IWETH(weth).deposit{value: msg.value}();
+                } else {
+                    ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
+                }
             }
 
             // transfer assets from putty to exerciser
