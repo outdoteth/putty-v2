@@ -74,6 +74,17 @@ contract TestFillOrder is Fixture {
         p.fillOrder(order, signature, floorAssetTokenIds);
     }
 
+    function testItCannotFillOrderIfDurationIsTooShort() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.duration = 14 minutes;
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        vm.expectRevert("Duration too short");
+        p.fillOrder(order, signature, floorAssetTokenIds);
+    }
+
     function testItCannotFillOrderIfBaseAssetIsNotContract() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
@@ -546,7 +557,7 @@ contract TestFillOrder is Fixture {
         order.maker = babe;
         order.floorTokens = new address[](0);
         order.baseAsset = address(weth);
-        order.duration = bound(order.duration, 0, 10_000 days);
+        order.duration = bound(order.duration, 15 minutes, 10_000 days);
         order.premium = bound(order.premium, 0, type(uint256).max - order.strike);
         order.strike = bound(order.strike, 0, type(uint256).max - order.premium);
         order.expiration = block.timestamp + 1 days;
