@@ -516,6 +516,29 @@ contract TestFillOrder is Fixture {
         p.fillOrder(order, signature, floorAssetTokenIds);
     }
 
+    function testItCannotUseNativeETHIfBaseAssetIsNotWeth() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.baseAsset = address(link);
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        vm.expectRevert("Cannot use native ETH");
+        p.fillOrder{value: 100}(order, signature, floorAssetTokenIds);
+    }
+
+    function testItCannotUseNativeETHIfLongcall() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = true;
+        order.isCall = true;
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        vm.expectRevert("Long call can't use native ETH");
+        p.fillOrder{value: 100}(order, signature, floorAssetTokenIds);
+    }
+
     function testItFillsOrder(PuttyV2.Order memory order) public {
         // arrange
         order.isCall = false;

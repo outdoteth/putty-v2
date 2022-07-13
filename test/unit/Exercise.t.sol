@@ -320,6 +320,44 @@ contract TestExercise is Fixture {
         p.exercise{value: order.strike - 1}(order, floorAssetTokenIds);
     }
 
+    function testItCannotUseNativeETHIfBaseAssetIsNotWETH() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = false;
+        order.isCall = false;
+        order.baseAsset = address(link);
+
+        deal(address(link), address(this), 0xffffffffff);
+        link.approve(address(p), type(uint256).max);
+
+        deal(address(link), babe, 0xffffffffff);
+        vm.prank(babe);
+        link.approve(address(p), type(uint256).max);
+
+        bytes memory signature = signOrder(babePrivateKey, order);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // act
+        order.isLong = true;
+        vm.expectRevert("Cannot use native ETH");
+        p.exercise{value: 100}(order, floorAssetTokenIds);
+    }
+
+    function testItCannotUseNativeETHIfPut() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isLong = false;
+        order.isCall = false;
+
+        bytes memory signature = signOrder(babePrivateKey, order);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // act
+        order.isLong = true;
+        vm.expectRevert("Puts can't use native ETH");
+        p.exercise{value: 100}(order, floorAssetTokenIds);
+    }
+
     function testItEmitsExercisedOrder() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();
