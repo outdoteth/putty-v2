@@ -528,6 +528,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         require(msg.sender == order.maker, "Not your order");
 
         bytes32 orderHash = hashOrder(order);
+        require(_ownerOf[uint256(orderHash)] == address(0), "Order already filled");
 
         // mark the order as cancelled
         cancelledOrders[orderHash] = true;
