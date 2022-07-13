@@ -503,6 +503,19 @@ contract TestFillOrder is Fixture {
         assertEq(positionId, uint256(p.hashOrder(order)), "Should have returned position id");
     }
 
+    function testItCannotFillShortCallWithFloorTokens() public {
+        // arrange
+        PuttyV2.Order memory order = defaultOrder();
+        order.isCall = true;
+        order.isLong = false;
+        order.floorTokens = new address[](3);
+        bytes memory signature = signOrder(babePrivateKey, order);
+
+        // act
+        vm.expectRevert("Short call cant have floorTokens");
+        p.fillOrder(order, signature, floorAssetTokenIds);
+    }
+
     function testItFillsOrder(PuttyV2.Order memory order) public {
         // arrange
         order.isCall = false;

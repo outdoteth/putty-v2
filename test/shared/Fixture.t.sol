@@ -36,6 +36,7 @@ abstract contract Fixture is Test, ERC721TokenReceiver {
         weth = new MockWeth();
 
         p = new PuttyV2("https://testing.org/tokens/", 0, address(weth));
+        vm.label(address(p), "Putty");
 
         babePrivateKey = uint256(0xbabe);
         babe = vm.addr(babePrivateKey);
