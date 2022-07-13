@@ -309,8 +309,11 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // check msg.sender is allowed to fill the order
         require(order.whitelist.length == 0 || isWhitelisted(order.whitelist, msg.sender), "Not whitelisted");
 
-        // check duration is valid
-        require(order.duration < 10_000 days, "Duration too long");
+        // check duration is not too long
+        require(order.duration <= 10_000 days, "Duration too long");
+
+        // check duration is not too short
+        require(order.duration >= 15 minutes, "Duration too short");
 
         // check order has not expired
         require(block.timestamp < order.expiration, "Order has expired");
