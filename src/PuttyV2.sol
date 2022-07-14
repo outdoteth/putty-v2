@@ -743,7 +743,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     /**
         @notice Get the orderHash for a complementary short/long order - e.g for a long order,
-                this returns the hash of it's opposite short order.
+                this returns the hash of its opposite short order.
         @param order The order to find the complementary long/short hash for.
         @return orderHash The hash of the opposite order.
      */
