@@ -94,7 +94,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     bytes32 public constant ERC20ASSET_TYPE_HASH = keccak256("ERC20Asset(address token,uint256 tokenAmount)");
 
     /**
-        @dev ERC721Asset type hash used for EIP-712 encoding.
+        @dev ORDER_TYPE_HASH type hash used for EIP-712 encoding.
      */
     bytes32 public constant ORDER_TYPE_HASH =
         keccak256(
