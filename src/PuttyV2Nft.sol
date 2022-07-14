@@ -2,7 +2,6 @@
 pragma solidity 0.8.15;
 
 import "solmate/tokens/ERC721.sol";
-import "openzeppelin/utils/Strings.sol";
 
 // removes balanceOf modifications
 // questionable tradeoff but given our use-case it's reasonable

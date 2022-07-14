@@ -55,16 +55,41 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     using SafeTransferLib for ERC20;
 
+    /**
+        @notice ERC20 asset details.
+        @param token The token address for the erc20 asset.
+        @param tokenAmount The amount of erc20 tokens.
+     */
     struct ERC20Asset {
         address token;
         uint256 tokenAmount;
     }
 
+    /**
+        @notice ERC721 asset details.
+        @param token The token address for the erc721 asset.
+        @param tokenId The token id of the erc721 assset.
+     */
     struct ERC721Asset {
         address token;
         uint256 tokenId;
     }
-
+    /**
+        @notice Order details.
+        @param maker The maker of the order.
+        @param isCall Whether or not the order is for a call or put option.
+        @param isLong Whether or not the order is long or short.
+        @param baseAsset The erc20 contract to use for the strike and premium.
+        @param strike The strike amount.
+        @param premium The premium amount.
+        @param duration The duration of the option contract (in seconds).
+        @param expiration The timestamp after which the order is no longer (unix).
+        @param nonce A random number for each order to prevent hash collisions.
+        @param whitelist A list of addresses that are allowed to fill this order - if empty then anyone can fill.
+        @param floorTokens A list of erc721 contract addresses for the underlying.
+        @param erc20Assets A list of erc20 assets for the underlying.
+        @param erc721Assets A list of erc721 assets for the underlying.
+     */
     struct Order {
         address maker;
         bool isCall;
@@ -94,7 +119,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     bytes32 public constant ERC20ASSET_TYPE_HASH = keccak256("ERC20Asset(address token,uint256 tokenAmount)");
 
     /**
-        @dev ERC721Asset type hash used for EIP-712 encoding.
+        @dev ORDER_TYPE_HASH type hash used for EIP-712 encoding.
      */
     bytes32 public constant ORDER_TYPE_HASH =
         keccak256(
@@ -220,7 +245,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         uint256 _fee,
         address _weth
     ) {
-        require(_weth != address(0), "Unset weth address");
+        require(_weth != address(0), "Must set weth address");
 
         setBaseURI(_baseURI);
         setFee(_fee);
@@ -599,6 +624,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     /**
         @notice Batch fills multiple orders.
+        @dev Purposefully marked as non-payable otherwise the msg.value can be used multiple times in fillOrder.
         @param orders The orders to fill.
         @param signatures The signatures to use for each respective order.
         @param floorAssetTokenIds The floorAssetTokenIds to use for each respective order.
@@ -609,8 +635,10 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         bytes[] calldata signatures,
         uint256[][] memory floorAssetTokenIds
     ) public returns (uint256[] memory positionIds) {
-        require(orders.length == signatures.length, "Length mismatch in input");
-        require(signatures.length == floorAssetTokenIds.length, "Length mismatch in input");
+        require(
+            orders.length == signatures.length && signatures.length == floorAssetTokenIds.length,
+            "Length mismatch in input"
+        );
 
         positionIds = new uint256[](orders.length);
 
@@ -620,10 +648,10 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     }
 
     /**
-        @notice Accepts a counter offer for an order. It fills the counter offer, and then
-                cancels the original order that the counter offer was made for.
+        @notice Accepts a counter offer for an order. It cancels the original order that the counter 
+                offer was made for and then it fills the counter offer.
         @dev There is no need for floorTokenIds here because there is no situation in which
-             it makes sense to have them when accepting counter offers. When accepting a counter 
+             it makes sense to have them when accepting counter offers; When accepting a counter 
              offer for a short call order, the complementary long call order already knows what 
              tokenIds are used in the short call so floorTokens should always be empty.
         @param order The counter offer to accept.
@@ -740,7 +768,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
     /**
         @notice Get the orderHash for a complementary short/long order - e.g for a long order,
-                this returns the hash of it's opposite short order.
+                this returns the hash of its opposite short order.
         @param order The order to find the complementary long/short hash for.
         @return orderHash The hash of the opposite order.
      */
@@ -812,7 +840,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     }
 
     /**
-        @return The domain seperator used when calculating the eip-712 hash.
+        @return The domain separator used when calculating the eip-712 hash.
      */
     function domainSeparatorV4() public view returns (bytes32) {
         return _domainSeparatorV4();

@@ -10,8 +10,8 @@ Withdraws a short position's assets from the contract. Either the strike amount 
     input                                        │ *check position side is equal to short     │
     ┌─────────────────────────────┐              │                                            │
     │ order: Order                ├──────────────► *check position has expired OR it has been │
-    │ floorAssetTokeIds: number[] │              │  exercised                                 │
-    └─────────────────────────────┘              │                                            │
+    └─────────────────────────────┘              │  exercised                                 │
+                                                 │                                            │
                                                  │ *check user owns position                  │
                                                  └───────────────────────┬────────────────────┘
                                                                          │
