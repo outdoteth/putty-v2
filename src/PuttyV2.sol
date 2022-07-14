@@ -220,7 +220,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         uint256 _fee,
         address _weth
     ) {
-        require(_weth != address(0), "Unset weth address");
+        require(_weth != address(0), "Must set weth address");
 
         setBaseURI(_baseURI);
         setFee(_fee);
@@ -621,10 +621,10 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     }
 
     /**
-        @notice Accepts a counter offer for an order. It fills the counter offer, and then
-                cancels the original order that the counter offer was made for.
+        @notice Accepts a counter offer for an order. It cancels the original order that the counter 
+                offer was made for and then it fills the counter offer.
         @dev There is no need for floorTokenIds here because there is no situation in which
-             it makes sense to have them when accepting counter offers. When accepting a counter 
+             it makes sense to have them when accepting counter offers; When accepting a counter 
              offer for a short call order, the complementary long call order already knows what 
              tokenIds are used in the short call so floorTokens should always be empty.
         @param order The counter offer to accept.
