@@ -610,8 +610,10 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         bytes[] calldata signatures,
         uint256[][] memory floorAssetTokenIds
     ) public returns (uint256[] memory positionIds) {
-        require(orders.length == signatures.length, "Length mismatch in input");
-        require(signatures.length == floorAssetTokenIds.length, "Length mismatch in input");
+        require(
+            orders.length == signatures.length && signatures.length == floorAssetTokenIds.length,
+            "Length mismatch in input"
+        );
 
         positionIds = new uint256[](orders.length);
 
