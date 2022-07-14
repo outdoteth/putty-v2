@@ -813,7 +813,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     }
 
     /**
-        @return The domain seperator used when calculating the eip-712 hash.
+        @return The domain separator used when calculating the eip-712 hash.
      */
     function domainSeparatorV4() public view returns (bytes32) {
         return _domainSeparatorV4();
