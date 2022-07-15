@@ -74,6 +74,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         address token;
         uint256 tokenId;
     }
+
     /**
         @notice Order details.
         @param maker The maker of the order.
@@ -84,7 +85,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         @param premium The premium amount.
         @param duration The duration of the option contract (in seconds).
         @param expiration The timestamp after which the order is no longer (unix).
-        @param nonce A random number for each order to prevent hash collisions.
+        @param nonce A random number for each order to prevent hash collisions and also check order validity.
         @param whitelist A list of addresses that are allowed to fill this order - if empty then anyone can fill.
         @param floorTokens A list of erc721 contract addresses for the underlying.
         @param erc20Assets A list of erc20 assets for the underlying.
@@ -188,6 +189,11 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     */
     mapping(address => uint256) public unclaimedFees;
 
+    /**
+        @notice The minimum valid nonce for each address.
+    */
+    mapping(address => uint256) public minimumValidNonce;
+
     /* ~~~ EVENTS ~~~ */
 
     /**
@@ -234,11 +240,17 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     event WithdrawOrder(bytes32 indexed orderHash, Order order);
 
     /**
-        @notice emitted When an order is cancelled.
+        @notice Emitted when an order is cancelled.
         @param orderHash The hash of the order that was cancelled.
         @param order The order that was cancelled.
      */
     event CancelledOrder(bytes32 indexed orderHash, Order order);
+
+    /**
+        @notice Emitted when a user sets their minimum valid nonce.
+        @param minimumValidNonce The new minimum valid nonce.
+     */
+    event SetMinimumValidNonce(uint256 minimumValidNonce);
 
     constructor(
         string memory _baseURI,
@@ -330,6 +342,9 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         // check order is not cancelled
         require(!cancelledOrders[orderHash], "Order has been cancelled");
+
+        // check order nonce is valid
+        require(order.nonce >= minimumValidNonce[order.maker], "Nonce is smaller than min");
 
         // check msg.sender is allowed to fill the order
         require(order.whitelist.length == 0 || isWhitelisted(order.whitelist, msg.sender), "Not whitelisted");
@@ -670,6 +685,17 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // accept the counter offer
         uint256[] memory floorAssetTokenIds = new uint256[](0);
         positionId = fillOrder(order, signature, floorAssetTokenIds);
+    }
+
+    /**
+        @notice Sets the minimum valid nonce for a user. Any unfilled orders with a nonce 
+                smaller than this minimum will no longer be valid and will unable to be filled.
+        @param _minimumValidNonce The new minimum valid nonce.
+     */
+    function setMinimumValidNonce(uint256 _minimumValidNonce) public {
+        minimumValidNonce[msg.sender] = _minimumValidNonce;
+
+        emit SetMinimumValidNonce(_minimumValidNonce);
     }
 
     /* ~~~ HELPER FUNCTIONS ~~~ */
