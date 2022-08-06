@@ -586,7 +586,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         bool isExercised = exercisedPositions[longPositionId];
 
         // check long position has either been exercised or is expired
-        require(block.timestamp > positionExpirations[longPositionId] || isExercised, "Must be exercised or expired");
+        require(isExercised || block.timestamp > positionExpirations[longPositionId], "Must be exercised or expired");
 
         /* ~~~ EFFECTS ~~~ */
 
