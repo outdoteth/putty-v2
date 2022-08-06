@@ -404,35 +404,37 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         }
 
         // transfer premium to whoever is short from whomever is long
-        if (order.isLong) {
-            // transfer premium to taker
-            ERC20(order.baseAsset).safeTransferFrom(order.maker, msg.sender, order.premium - feeAmount);
-
-            // collect fees
-            if (feeAmount > 0) {
-                ERC20(order.baseAsset).safeTransferFrom(order.maker, address(this), feeAmount);
-            }
-        } else {
-            // handle the case where the user uses native ETH instead of WETH to pay the premium
-            if (msg.value > 0) {
-                // check enough ETH was sent to cover the premium
-                require(msg.value == order.premium, "Incorrect ETH amount sent");
-
-                // convert ETH to WETH and send premium to maker
-                // converting to WETH instead of forwarding native ETH to the maker has two benefits;
-                // 1) active market makers will mostly be using WETH not native ETH
-                // 2) attack surface for re-entrancy is reduced
-                IWETH(weth).deposit{value: order.premium}();
-
-                // collect fees and transfer to premium to maker
-                IWETH(weth).transfer(order.maker, order.premium - feeAmount);
-            } else {
-                // transfer premium to maker
-                ERC20(order.baseAsset).safeTransferFrom(msg.sender, order.maker, order.premium - feeAmount);
+        if (order.premium > 0) {
+            if (order.isLong) {
+                // transfer premium to taker
+                ERC20(order.baseAsset).safeTransferFrom(order.maker, msg.sender, order.premium - feeAmount);
 
                 // collect fees
                 if (feeAmount > 0) {
-                    ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), feeAmount);
+                    ERC20(order.baseAsset).safeTransferFrom(order.maker, address(this), feeAmount);
+                }
+            } else {
+                // handle the case where the user uses native ETH instead of WETH to pay the premium
+                if (msg.value > 0) {
+                    // check enough ETH was sent to cover the premium
+                    require(msg.value == order.premium, "Incorrect ETH amount sent");
+
+                    // convert ETH to WETH and send premium to maker
+                    // converting to WETH instead of forwarding native ETH to the maker has two benefits;
+                    // 1) active market makers will mostly be using WETH not native ETH
+                    // 2) attack surface for re-entrancy is reduced
+                    IWETH(weth).deposit{value: order.premium}();
+
+                    // collect fees and transfer to premium to maker
+                    IWETH(weth).transfer(order.maker, order.premium - feeAmount);
+                } else {
+                    // transfer premium to maker
+                    ERC20(order.baseAsset).safeTransferFrom(msg.sender, order.maker, order.premium - feeAmount);
+
+                    // collect fees
+                    if (feeAmount > 0) {
+                        ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), feeAmount);
+                    }
                 }
             }
         }
