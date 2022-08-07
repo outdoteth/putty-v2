@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import "openzeppelin/utils/introspection/ERC165.sol";
-
 import "./PuttyV2.sol";
 
 interface IPuttyV2Handler {
@@ -19,11 +17,7 @@ interface IPuttyV2Handler {
     ) external;
 }
 
-contract PuttyV2Handler is ERC165 {
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(IPuttyV2Handler).interfaceId || super.supportsInterface(interfaceId);
-    }
-
+contract PuttyV2Handler {
     function onFillOrder(
         PuttyV2.Order memory order,
         address taker,

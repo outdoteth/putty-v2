@@ -2,11 +2,12 @@
 pragma solidity 0.8.15;
 
 import "openzeppelin/interfaces/IERC1271.sol";
+import "openzeppelin/utils/introspection/ERC165.sol";
 
 import "../../src/PuttyV2Handler.sol";
 import "../../src/PuttyV2.sol";
 
-contract MockPuttyV2Handler is PuttyV2Handler {
+contract MockPuttyV2Handler is PuttyV2Handler, ERC165 {
     address public fillOrderTaker;
     address public exerciseTaker;
 
@@ -42,5 +43,9 @@ contract MockPuttyV2Handler is PuttyV2Handler {
                 fillOrderTaker = address(0xb0b);
             }
         }
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
+        return interfaceId == type(IPuttyV2Handler).interfaceId || super.supportsInterface(interfaceId);
     }
 }
