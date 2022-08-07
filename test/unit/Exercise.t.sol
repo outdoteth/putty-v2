@@ -7,6 +7,7 @@ import "openzeppelin/utils/cryptography/ECDSA.sol";
 
 import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
+import "../mocks/MockPuttyV2Handler.sol";
 
 contract TestExercise is Fixture {
     event ExercisedOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, PuttyV2.Order order);
@@ -21,10 +22,14 @@ contract TestExercise is Fixture {
     function setUp() public {
         deal(address(weth), address(this), 0xffffffff);
         deal(address(weth), babe, 0xffffffff);
+        deal(address(weth), address(0xb0b), 0xffffffff);
 
         weth.approve(address(p), type(uint256).max);
 
         vm.prank(babe);
+        weth.approve(address(p), type(uint256).max);
+
+        vm.prank(address(0xb0b));
         weth.approve(address(p), type(uint256).max);
     }
 
@@ -369,5 +374,46 @@ contract TestExercise is Fixture {
         vm.expectEmit(true, true, true, true);
         emit ExercisedOrder(p.hashOrder(order), floorAssetTokenIds, order);
         p.exercise(order, floorAssetTokenIds);
+    }
+
+    function testItCallsOnExerciseCallbackIfTakerSupportsInterface() public {
+        // arrange
+        MockPuttyV2Handler handler = new MockPuttyV2Handler();
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature;
+        order.maker = address(handler);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // act
+        order.isLong = true;
+        p.exercise(order, floorAssetTokenIds);
+
+        // assert
+        assertEq(handler.exerciseTaker(), address(this), "Should have set address to taker");
+    }
+
+    function testItExercisesEvenIfCallbackErrors() public {
+        // arrange
+        MockPuttyV2Handler handler = new MockPuttyV2Handler();
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature;
+        order.maker = address(handler);
+
+        vm.startPrank(address(0xb0b));
+        p.fillOrder(order, signature, floorAssetTokenIds);
+        uint256 balanceBefore = weth.balanceOf(address(p));
+
+        // act
+        order.isLong = true;
+        p.exercise{gas: 150_000}(order, floorAssetTokenIds);
+        vm.stopPrank();
+
+        // assert
+        assertEq(handler.exerciseTaker(), address(0), "Should have not set address to taker");
+        assertEq(
+            weth.balanceOf(address(p)) - balanceBefore,
+            order.strike,
+            "Should have transferred strike from exerciser to contract"
+        );
     }
 }

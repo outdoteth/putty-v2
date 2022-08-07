@@ -7,6 +7,7 @@ import "openzeppelin/utils/cryptography/ECDSA.sol";
 
 import "src/PuttyV2.sol";
 import "../shared/Fixture.t.sol";
+import "../mocks/MockPuttyV2Handler.sol";
 
 contract TestFillOrder is Fixture {
     event FilledOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, PuttyV2.Order order);
@@ -22,10 +23,14 @@ contract TestFillOrder is Fixture {
     function setUp() public {
         deal(address(weth), address(this), 0xffffffff);
         deal(address(weth), babe, 0xffffffff);
+        deal(address(weth), address(0xb0b), 0xffffffff);
 
         weth.approve(address(p), type(uint256).max);
 
         vm.prank(babe);
+        weth.approve(address(p), type(uint256).max);
+
+        vm.prank(address(0xb0b));
         weth.approve(address(p), type(uint256).max);
     }
 
@@ -562,6 +567,45 @@ contract TestFillOrder is Fixture {
         // act
         vm.expectRevert("Long call can't use native ETH");
         p.fillOrder{value: 100}(order, signature, floorAssetTokenIds);
+    }
+
+    function testItCallsFillOrderCallbackIfTakerSupportsInterface() public {
+        // arrange
+        MockPuttyV2Handler handler = new MockPuttyV2Handler();
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature;
+        order.maker = address(handler);
+
+        deal(address(weth), address(handler), 0xffffffff);
+        vm.prank(address(handler));
+        weth.approve(address(p), type(uint256).max);
+
+        // act
+        vm.prank(babe);
+        p.fillOrder(order, signature, floorAssetTokenIds);
+
+        // assert
+        assertEq(handler.fillOrderTaker(), babe, "Should have set address to taker");
+    }
+
+    function testItFillsOrderEvenIfCallbackErrors() public {
+        // arrange
+        MockPuttyV2Handler handler = new MockPuttyV2Handler();
+        PuttyV2.Order memory order = defaultOrder();
+        bytes memory signature;
+        order.maker = address(handler);
+
+        deal(address(weth), address(handler), 0xffffffff);
+        vm.prank(address(handler));
+        weth.approve(address(p), type(uint256).max);
+
+        // act
+        vm.prank(address(0xb0b));
+        uint256 positionId = p.fillOrder{gas: 500_000}(order, signature, floorAssetTokenIds);
+
+        // assert
+        assertEq(handler.fillOrderTaker(), address(0), "Should have not set address to taker");
+        assertEq(p.ownerOf(positionId), address(0xb0b), "Should have sent position to bob");
     }
 
     function testItFillsOrder(PuttyV2.Order memory order) public {

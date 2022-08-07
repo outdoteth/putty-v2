@@ -39,11 +39,13 @@ import "./lib/IWETH.sol";
 import "openzeppelin/utils/cryptography/SignatureChecker.sol";
 import "openzeppelin/utils/cryptography/draft-EIP712.sol";
 import "openzeppelin/utils/Strings.sol";
+import "openzeppelin/utils/introspection/ERC165Checker.sol";
 import "openzeppelin/access/Ownable.sol";
 import "solmate/utils/SafeTransferLib.sol";
 import "solmate/tokens/ERC721.sol";
 
 import "./PuttyV2Nft.sol";
+import "./IPuttyV2Handler.sol";
 
 /**
     @title PuttyV2
@@ -439,14 +441,11 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             }
         }
 
-        // filling short put: transfer strike from maker to contract
         if (!order.isLong && !order.isCall) {
+            // filling short put: transfer strike from maker to contract
             ERC20(order.baseAsset).safeTransferFrom(order.maker, address(this), order.strike);
-            return positionId;
-        }
-
-        // filling long put: transfer strike from taker to contract
-        if (order.isLong && !order.isCall) {
+        } else if (order.isLong && !order.isCall) {
+            // filling long put: transfer strike from taker to contract
             // handle the case where the taker uses native ETH instead of WETH to deposit the strike
             if (msg.value > 0) {
                 // check enough ETH was sent to cover the strike
@@ -459,26 +458,25 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             } else {
                 ERC20(order.baseAsset).safeTransferFrom(msg.sender, address(this), order.strike);
             }
-
-            return positionId;
-        }
-
-        // filling short call: transfer assets from maker to contract
-        if (!order.isLong && order.isCall) {
+        } else if (!order.isLong && order.isCall) {
+            // filling short call: transfer assets from maker to contract
             _transferERC20sIn(order.erc20Assets, order.maker);
             _transferERC721sIn(order.erc721Assets, order.maker);
-            return positionId;
-        }
-
-        // filling long call: transfer assets from taker to contract
-        if (order.isLong && order.isCall) {
+        } else if (order.isLong && order.isCall) {
+            // filling long call: transfer assets from taker to contract
             // long calls never need native ETH
             require(msg.value == 0, "Long call can't use native ETH");
 
             _transferERC20sIn(order.erc20Assets, msg.sender);
             _transferERC721sIn(order.erc721Assets, msg.sender);
             _transferFloorsIn(order.floorTokens, floorAssetTokenIds, msg.sender);
-            return positionId;
+        }
+
+        if (ERC165Checker.supportsInterface(order.maker, type(IPuttyV2Handler).interfaceId)) {
+            // callback the maker with onFillOrder - save 15k gas in case of revert
+            order.maker.call{gas: gasleft() - 15_000}(
+                abi.encodeWithSelector(IPuttyV2Handler.onFillOrder.selector, order, msg.sender, floorAssetTokenIds)
+            );
         }
     }
 
@@ -525,6 +523,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
 
         /* ~~~ INTERACTIONS ~~~ */
 
+        uint256 shortPositionId = uint256(hashOppositeOrder(order));
         if (order.isCall) {
             // -- exercising a call option
 
@@ -554,7 +553,6 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             require(msg.value == 0, "Puts can't use native ETH");
 
             // save the floor asset token ids to the short position
-            uint256 shortPositionId = uint256(hashOppositeOrder(order));
             positionFloorAssetTokenIds[shortPositionId] = floorAssetTokenIds;
 
             // transfer strike from putty to exerciser
@@ -564,6 +562,16 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
             _transferERC20sIn(order.erc20Assets, msg.sender);
             _transferERC721sIn(order.erc721Assets, msg.sender);
             _transferFloorsIn(order.floorTokens, floorAssetTokenIds, msg.sender);
+        }
+
+        // attempt call onExercise on the short position owner
+        address shortOwner = ownerOf(shortPositionId);
+        order.isLong = false;
+        if (ERC165Checker.supportsInterface(shortOwner, type(IPuttyV2Handler).interfaceId)) {
+            // callback the short owner with onExercise - save 15k gas in case of revert
+            order.maker.call{gas: gasleft() - 15_000}(
+                abi.encodeWithSelector(IPuttyV2Handler.onExercise.selector, order, msg.sender, floorAssetTokenIds)
+            );
         }
     }
 
