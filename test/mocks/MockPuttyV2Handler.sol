@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import "openzeppelin/utils/introspection/ERC165.sol";
 import "openzeppelin/interfaces/IERC1271.sol";
 
-import "../../src/IPuttyV2Handler.sol";
+import "../../src/PuttyV2Handler.sol";
 import "../../src/PuttyV2.sol";
 
-contract MockPuttyV2Handler is IPuttyV2Handler, ERC165 {
+contract MockPuttyV2Handler is PuttyV2Handler {
     address public fillOrderTaker;
     address public exerciseTaker;
 
@@ -19,7 +18,7 @@ contract MockPuttyV2Handler is IPuttyV2Handler, ERC165 {
         PuttyV2.Order memory order,
         address taker,
         uint256[] memory floorAssetTokenIds
-    ) external {
+    ) public override {
         fillOrderTaker = taker;
 
         // cause on OOG error if taker is 0xb0b
@@ -34,7 +33,7 @@ contract MockPuttyV2Handler is IPuttyV2Handler, ERC165 {
         PuttyV2.Order memory order,
         address exerciser,
         uint256[] memory floorAssetTokenIds
-    ) external {
+    ) public override {
         exerciseTaker = exerciser;
 
         // cause on OOG error if exerciser is 0xb0b
@@ -43,9 +42,5 @@ contract MockPuttyV2Handler is IPuttyV2Handler, ERC165 {
                 fillOrderTaker = address(0xb0b);
             }
         }
-    }
-
-    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
-        return interfaceId == type(IPuttyV2Handler).interfaceId || super.supportsInterface(interfaceId);
     }
 }

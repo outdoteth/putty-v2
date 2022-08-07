@@ -45,7 +45,7 @@ import "solmate/utils/SafeTransferLib.sol";
 import "solmate/tokens/ERC721.sol";
 
 import "./PuttyV2Nft.sol";
-import "./IPuttyV2Handler.sol";
+import "./PuttyV2Handler.sol";
 
 /**
     @title PuttyV2
@@ -475,7 +475,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         if (ERC165Checker.supportsInterface(order.maker, type(IPuttyV2Handler).interfaceId)) {
             // callback the maker with onFillOrder - save 15k gas in case of revert
             order.maker.call{gas: gasleft() - 15_000}(
-                abi.encodeWithSelector(IPuttyV2Handler.onFillOrder.selector, order, msg.sender, floorAssetTokenIds)
+                abi.encodeWithSelector(PuttyV2Handler.onFillOrder.selector, order, msg.sender, floorAssetTokenIds)
             );
         }
     }
@@ -570,7 +570,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         if (ERC165Checker.supportsInterface(shortOwner, type(IPuttyV2Handler).interfaceId)) {
             // callback the short owner with onExercise - save 15k gas in case of revert
             order.maker.call{gas: gasleft() - 15_000}(
-                abi.encodeWithSelector(IPuttyV2Handler.onExercise.selector, order, msg.sender, floorAssetTokenIds)
+                abi.encodeWithSelector(PuttyV2Handler.onExercise.selector, order, msg.sender, floorAssetTokenIds)
             );
         }
     }
