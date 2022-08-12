@@ -569,7 +569,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         order.isLong = false;
         if (ERC165Checker.supportsInterface(shortOwner, type(IPuttyV2Handler).interfaceId)) {
             // callback the short owner with onExercise - save 15k gas in case of revert
-            order.maker.call{gas: gasleft() - 15_000}(
+            shortOwner.call{gas: gasleft() - 15_000}(
                 abi.encodeWithSelector(PuttyV2Handler.onExercise.selector, order, msg.sender, floorAssetTokenIds)
             );
         }
