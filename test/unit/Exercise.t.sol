@@ -380,9 +380,11 @@ contract TestExercise is Fixture {
         // arrange
         MockPuttyV2Handler handler = new MockPuttyV2Handler();
         PuttyV2.Order memory order = defaultOrder();
-        bytes memory signature;
-        order.maker = address(handler);
+        bytes memory signature = signOrder(babePrivateKey, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
+        uint256 shortPositionId = uint256(p.hashOrder(order));
+        vm.prank(babe);
+        p.transferFrom(babe, address(handler), shortPositionId);
 
         // act
         order.isLong = true;
