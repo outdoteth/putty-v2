@@ -6,4 +6,4 @@ optimizer = true
 no_match_path = "test/differential/*"
 
 [profile.ci]
-fuzz_runs = 10
+fuzz_runs = 100
