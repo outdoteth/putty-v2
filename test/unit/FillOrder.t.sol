@@ -10,7 +10,12 @@ import "../shared/Fixture.t.sol";
 import "../mocks/MockPuttyV2Handler.sol";
 
 contract TestFillOrder is Fixture {
-    event FilledOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, PuttyV2.Order order);
+    event FilledOrder(
+        bytes32 indexed orderHash,
+        bytes32 indexed oppositeOrderHash,
+        uint256[] floorAssetTokenIds,
+        PuttyV2.Order order
+    );
 
     address[] internal whitelist;
     address[] internal floorTokens;
@@ -527,7 +532,7 @@ contract TestFillOrder is Fixture {
 
         // act
         vm.expectEmit(true, true, true, true);
-        emit FilledOrder(p.hashOrder(order), floorAssetTokenIds, order);
+        emit FilledOrder(p.hashOrder(order), p.hashOppositeOrder(order), floorAssetTokenIds, order);
         p.fillOrder(order, signature, floorAssetTokenIds);
     }
 

@@ -221,10 +221,16 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
     /**
         @notice Emitted when an order is filled.
         @param orderHash The hash of the order that was filled.
+        @param oppositeOrderHash The opposite hash of the order that was filled.
         @param floorAssetTokenIds The floor asset token ids that were used.
         @param order The order that was filled.
      */
-    event FilledOrder(bytes32 indexed orderHash, uint256[] floorAssetTokenIds, Order order);
+    event FilledOrder(
+        bytes32 indexed orderHash,
+        bytes32 indexed oppositeOrderHash,
+        uint256[] floorAssetTokenIds,
+        Order order
+    );
 
     /**
         @notice Emitted when an order is exercised.
@@ -394,7 +400,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         // save the long position expiration
         positionExpirations[order.isLong ? uint256(orderHash) : positionId] = block.timestamp + order.duration;
 
-        emit FilledOrder(orderHash, floorAssetTokenIds, order);
+        emit FilledOrder(orderHash, oppositeOrderHash, floorAssetTokenIds, order);
 
         /* ~~~ INTERACTIONS ~~~ */
 
