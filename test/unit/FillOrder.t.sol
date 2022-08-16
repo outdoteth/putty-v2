@@ -104,6 +104,17 @@ contract TestFillOrder is Fixture {
         p.fillOrder(order, signature, floorAssetTokenIds);
     }
 
+    function testItCanOnlyIncrementNonce() public {
+        // arrange
+        vm.startPrank(babe);
+        p.setMinimumValidNonce(501);
+
+        // act
+        vm.expectRevert("Nonce should increase");
+        p.setMinimumValidNonce(499);
+        vm.stopPrank();
+    }
+
     function testItCannotFillOrderIfBaseAssetIsNotContract() public {
         // arrange
         PuttyV2.Order memory order = defaultOrder();

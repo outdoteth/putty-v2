@@ -703,6 +703,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         @param _minimumValidNonce The new minimum valid nonce.
      */
     function setMinimumValidNonce(uint256 _minimumValidNonce) public {
+        require(_minimumValidNonce > minimumValidNonce[msg.sender], "Nonce should increase");
         minimumValidNonce[msg.sender] = _minimumValidNonce;
 
         emit SetMinimumValidNonce(_minimumValidNonce);
