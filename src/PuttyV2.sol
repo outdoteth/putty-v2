@@ -313,7 +313,7 @@ contract PuttyV2 is PuttyV2Nft, EIP712("Putty", "2.0"), ERC721TokenReceiver, Own
         emit WithdrewFees(asset, fees, recipient);
 
         // send the fees to the recipient
-        ERC20(asset).transfer(recipient, fees);
+        ERC20(asset).safeTransfer(recipient, fees);
     }
 
     /*
