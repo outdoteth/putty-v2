@@ -2,6 +2,7 @@
 
 An order-book based american options market for NFTs and ERC20s.
 This project uses the foundry framework for testing/deployment.
+There are specification files going into further detail [here](./spec/)
 
 ## Getting started
 
